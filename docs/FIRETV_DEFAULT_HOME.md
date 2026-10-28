@@ -33,7 +33,7 @@ Configuration:
 
 ```xml
 <accessibility-service
-    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityEventTypes="typeAllMask"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagRequestFilterKeyEvents"
     android:canRequestFilterKeyEvents="true"
@@ -51,6 +51,8 @@ This approach is modelled on **FTVLaunchX** by Erik Abele (Apache 2.0), which us
 
 ## Enable
 
+> **Important:** installing the APK does not change the Home button by itself. The accessibility service must be enabled once.
+
 ```bash
 adb shell pm grant com.aurora.home android.permission.WRITE_SECURE_SETTINGS
 
@@ -58,6 +60,8 @@ adb shell am broadcast \
   -a com.aurora.home.ENABLE_HOME_KEY \
   -n com.aurora.home/.HomeKeyReceiver
 ```
+
+Or run `tools\setup-firetv-home.bat` / `.\tools\setup-firetv-home.ps1` from the repository root.
 
 Or use **Settings → Apps → Default home → Enable now**.
 

@@ -40,3 +40,9 @@
 ## Repository snapshot
 
 This repository is the first public snapshot of the Fire TV build. Source, resources, build script, selected screenshots and the signed debug APK are included.
+
+### Compatibility update
+
+- Broadened the accessibility service event mask to `typeAllMask` so Fire OS accepts the service on more builds.
+- Added `tools/setup-firetv-home.bat` and `tools/setup-firetv-home.ps1` for one-command installation and Home-key setup.
+- Added clearer Home-key troubleshooting: the APK alone cannot override the Fire OS 5.1.1 Home button; the service must be enabled.

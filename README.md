@@ -100,6 +100,8 @@ OBAA Home includes two pieces for this:
 
 ### Enable the Home key service
 
+> **Important:** installing the APK does not change the Fire TV Home button by itself. Fire OS 5.1.1 ignores normal default-launcher changes, so the accessibility service below must be enabled once.
+
 ```bash
 # 1. Grant the one-time setup permission
 adb shell pm grant com.aurora.home android.permission.WRITE_SECURE_SETTINGS
@@ -114,7 +116,19 @@ adb shell settings get secure enabled_accessibility_services
 adb shell dumpsys accessibility
 ```
 
-You can also open **OBAA Home → Settings → Apps → Default home → Enable now** after granting the permission.
+Or run the included helper from the repository root:
+
+```bat
+tools\setup-firetv-home.bat
+```
+
+On PowerShell:
+
+```powershell
+.\tools\setup-firetv-home.ps1
+```
+
+You can also open **OBAA Home → Settings → Apps → Default home → Enable now** after granting the permission, or enable **OBAA Home key** directly in **Fire TV Settings → Accessibility**.
 
 ### Verify
 
@@ -213,7 +227,9 @@ aurora-home/
 │   └── ...
 ├── tools/
 │   ├── GenIcon.java             # Generates launcher icons
-│   └── HomeDefault.java         # Optional shell helper for preferred activities
+│   ├── HomeDefault.java         # Optional shell helper for preferred activities
+│   ├── setup-firetv-home.bat    # One-command Home-key setup (Windows)
+│   └── setup-firetv-home.ps1    # One-command Home-key setup (PowerShell)
 └── docs/
     ├── BUILD.md
     ├── INSTALL.md

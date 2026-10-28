@@ -2,6 +2,7 @@ package com.aurora.home;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Intent;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
 
@@ -24,6 +25,12 @@ public class HomeAccessibilityService extends AccessibilityService {
     }
 
     @Override
+    protected void onServiceConnected() {
+        super.onServiceConnected();
+        Log.i("HomeAccessibilityService", "connected");
+    }
+
+    @Override
     protected boolean onKeyEvent(KeyEvent event) {
         final int action = event.getAction();
         switch (event.getKeyCode()) {
@@ -36,6 +43,7 @@ public class HomeAccessibilityService extends AccessibilityService {
                     return false;
                 }
                 if (action == KeyEvent.ACTION_DOWN) {
+                    Log.i("HomeAccessibilityService", "home key intercepted");
                     Intent intent = new Intent(this, HomeActivity.class);
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                             | Intent.FLAG_ACTIVITY_CLEAR_TOP

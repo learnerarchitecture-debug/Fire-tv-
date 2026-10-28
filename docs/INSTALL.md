@@ -66,13 +66,26 @@ adb shell pm grant com.aurora.home android.permission.WRITE_SECURE_SETTINGS
 
 ### Enable the service
 
+> **Important:** installing the APK does not change the Fire TV Home button by itself. Fire OS 5.1.1 ignores normal default-launcher changes, so the accessibility service must be enabled once.
+
 ```bash
+adb shell pm grant com.aurora.home android.permission.WRITE_SECURE_SETTINGS
 adb shell am broadcast \
   -a com.aurora.home.ENABLE_HOME_KEY \
   -n com.aurora.home/.HomeKeyReceiver
 ```
 
-Or use **Settings → Apps → Default home → Enable now** in OBAA Home.
+Or use the included helper from the repository root:
+
+```bat
+tools\setup-firetv-home.bat
+```
+
+```powershell
+.\tools\setup-firetv-home.ps1
+```
+
+You can also use **Settings → Apps → Default home → Enable now** in OBAA Home, or enable **OBAA Home key** directly in **Fire TV Settings → Accessibility**.
 
 ### Verify
 
@@ -120,7 +133,7 @@ If the service was enabled manually in Fire TV accessibility settings, turn it o
 |---|---|
 | `device offline` | Wake the Fire TV, reconnect with the current IP, and run `adb devices` again. |
 | App drawer does not open | Open it from the **Apps** dock item; the drawer activity is not exported and cannot be started with `am start`. |
-| Home button still opens the stock launcher | Confirm `WRITE_SECURE_SETTINGS` was granted and the broadcast succeeded. Check `settings get secure enabled_accessibility_services`. Some Fire OS builds reject sideloaded accessibility services; see [FIRETV_DEFAULT_HOME.md](FIRETV_DEFAULT_HOME.md). |
+| Home button still opens the stock launcher | Reinstall the latest APK (it must contain `HomeKeyReceiver`), run the setup script, then enable **OBAA Home key** in **Fire TV Settings → Accessibility**. Check `settings get secure enabled_accessibility_services`; if it is blank, Fire OS rejected the service. See [FIRETV_DEFAULT_HOME.md](FIRETV_DEFAULT_HOME.md). |
 | Netflix tile is a fallback | Netflix is not installed on the device; install it from the Appstore and reopen the drawer. |
 | Prime Video exits immediately | The Prime app exits on the test device even from Fire OS itself; this is not an OBAA Home crash. |
 | YouTube returns to the stock launcher on Back | YouTube opens in its own task. The Home-key service is the intended way back to OBAA Home. |
