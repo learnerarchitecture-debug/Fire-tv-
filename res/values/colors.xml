@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="window_base">#07090F</color>
+    <color name="text_primary">#F2F4F8</color>
+    <color name="text_secondary">#A5ADBE</color>
+    <color name="text_hint">#6E788C</color>
+    <color name="text_dim">#4E586B</color>
+    <color name="accent_default">#FFB45E</color>
+    <color name="accent_soft">#33FFB45E</color>
+    <color name="card_bg">#12FFFFFF</color>
+    <color name="badge_bg">#1AFFFFFF</color>
+    <color name="label_color">#C7CEDA</color>
+    <color name="ring">#B3FFFFFF</color>
+    <color name="focus_outline">#66FFFFFF</color>
+    <color name="divider">#1FFFFFFF</color>
+    <color name="glass_fill">#14FFFFFF</color>
+    <color name="glass_fill_strong">#1FFFFFFF</color>
+    <color name="glass_stroke">#38FFFFFF</color>
+    <color name="glass_stroke_soft">#1FFFFFFF</color>
+    <color name="scrim">#A6000000</color>
+    <color name="scrim_light">#66000000</color>
+    <color name="black">#00000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="green">#6FE3B0</color>
+    <color name="red">#FF7A6B</color>
+    <color name="switch_thumb">#8A93A6</color>
+    <color name="switch_track">#33FFFFFF</color>
+</resources>

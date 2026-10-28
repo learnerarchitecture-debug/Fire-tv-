@@ -1,0 +1,784 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/window_base">
+
+    <com.aurora.home.AuroraBackgroundView
+        android:id="@+id/bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <LinearLayout
+        android:id="@+id/shell"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingLeft="@dimen/screen_pad"
+        android:paddingRight="@dimen/screen_pad"
+        android:paddingTop="@dimen/screen_top"
+        android:paddingBottom="@dimen/screen_bottom"
+        android:clipChildren="false"
+        android:clipToPadding="false">
+
+        <!-- Top bar: brand, weather, large-minutes clock, settings, profile -->
+        <LinearLayout
+            android:id="@+id/topbar"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/topbar_h"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <FrameLayout
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:background="@drawable/aurora_logo_bg">
+
+                    <com.aurora.home.IconView
+                        android:id="@+id/brand_icon"
+                        android:layout_width="19dp"
+                        android:layout_height="19dp"
+                        android:layout_gravity="center"/>
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="10dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/brand_title"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.14"
+                        android:includeFontPadding="false"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="1dp"
+                        android:text="@string/brand_sub"
+                        android:textColor="@color/text_hint"
+                        android:textSize="7.5sp"
+                        android:letterSpacing="0.22"
+                        android:includeFontPadding="false"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"/>
+
+            <LinearLayout
+                android:id="@+id/weather_chip"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/glass_chip_focus"
+                android:paddingLeft="10dp"
+                android:paddingRight="12dp"
+                android:focusable="true"
+                android:clickable="true"
+                android:tag="glass">
+
+                <com.aurora.home.WeatherIconView
+                    android:id="@+id/wx_icon"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"/>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="8dp"
+                    android:orientation="vertical"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/wx_temp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--°"
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:includeFontPadding="false"/>
+
+                    <TextView
+                        android:id="@+id/wx_cond"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/weather_unavailable"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="7sp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:includeFontPadding="false"/>
+
+                    <TextView
+                        android:id="@+id/wx_loc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/set_city"
+                        android:textColor="@color/text_hint"
+                        android:textSize="6.5sp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:includeFontPadding="false"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/clock_area"
+                android:layout_width="wrap_content"
+                android:layout_height="45dp"
+                android:layout_marginLeft="10dp"
+                android:orientation="vertical"
+                android:background="@drawable/glass_chip"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:tag="glass">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="bottom">
+
+                    <TextView
+                        android:id="@+id/clock_hour"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="9"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/clock_hour_size"
+                        android:fontFamily="sans-serif"
+                        android:includeFontPadding="false"/>
+
+                    <TextView
+                        android:id="@+id/clock_colon"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=":"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="@dimen/clock_colon_size"
+                        android:includeFontPadding="false"/>
+
+                    <TextView
+                        android:id="@+id/clock_minute"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="41"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/clock_minute_size"
+                        android:textStyle="bold"
+                        android:fontFamily="sans-serif"
+                        android:includeFontPadding="false"/>
+
+                    <TextView
+                        android:id="@+id/clock_ampm"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="2dp"
+                        android:layout_marginBottom="4dp"
+                        android:text="PM"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="@dimen/clock_ampm_size"
+                        android:includeFontPadding="false"/>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/clock_date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:text="Tuesday, October 27"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/clock_date_size"
+                    android:letterSpacing="0.04"
+                    android:includeFontPadding="false"/>
+            </LinearLayout>
+
+            <FrameLayout
+                android:id="@+id/settings_btn"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:layout_marginLeft="10dp"
+                android:background="@drawable/glass_button"
+                android:focusable="true"
+                android:clickable="true">
+
+                <com.aurora.home.IconView
+                    android:id="@+id/settings_icon"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_gravity="center"/>
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/avatar"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginLeft="8dp"
+                android:background="@drawable/avatar_bg"
+                android:gravity="center"
+                android:text="O"
+                android:textColor="#1A0F08"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:focusable="true"
+                android:clickable="true"/>
+        </LinearLayout>
+
+        <!-- Featured hero + swipe deck -->
+        <LinearLayout
+            android:id="@+id/main_row"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/main_h"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal"
+            android:clipChildren="false"
+            android:clipToPadding="false">
+
+            <FrameLayout
+                android:id="@+id/hero_card"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/glass_panel"
+                android:elevation="10dp"
+                android:tag="glass">
+
+                <com.aurora.home.PosterArtView
+                    android:id="@+id/hero_art"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"/>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/hero_scrim"/>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/glass_frame"/>
+
+                <LinearLayout
+                    android:id="@+id/hero_content"
+                    android:layout_width="400dp"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical|start"
+                    android:orientation="vertical"
+                    android:paddingLeft="24dp"
+                    android:paddingRight="18dp"
+                    android:paddingBottom="22dp"
+                    android:paddingTop="16dp">
+
+                    <TextView
+                        android:id="@+id/hero_eyebrow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/featured_eyebrow"
+                        android:textColor="#FFFFB45E"
+                        android:textSize="@dimen/hero_eyebrow_size"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.2"
+                        android:includeFontPadding="false"/>
+
+                    <TextView
+                        android:id="@+id/hero_title"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Dune: Part Two"
+                        android:textColor="@color/text_primary"
+                        android:textSize="@dimen/hero_title_size"
+                        android:textStyle="bold"
+                        android:fontFamily="sans-serif"
+                        android:maxLines="2"
+                        android:ellipsize="end"
+                        android:lineSpacingExtra="0dp"
+                        android:includeFontPadding="false"/>
+
+                    <TextView
+                        android:id="@+id/hero_meta"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:text="2024  ·  Sci-Fi · Epic  ·  2h 46m  ·  ★ 8.8"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="@dimen/hero_meta_size"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:includeFontPadding="false"/>
+
+                    <TextView
+                        android:id="@+id/hero_desc"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:text="Paul Atreides unites with the Fremen and walks the path of revenge."
+                        android:textColor="#CCD4DEEA"
+                        android:textSize="@dimen/hero_desc_size"
+                        android:maxLines="2"
+                        android:ellipsize="end"
+                        android:lineSpacingExtra="1dp"
+                        android:includeFontPadding="false"/>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:layout_marginTop="11dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <LinearLayout
+                            android:id="@+id/hero_play"
+                            android:layout_width="wrap_content"
+                            android:layout_height="32dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:background="@drawable/btn_primary"
+                            android:paddingLeft="14dp"
+                            android:paddingRight="16dp"
+                            android:focusable="true"
+                            android:focusableInTouchMode="true"
+                            android:clickable="true">
+
+                            <com.aurora.home.IconView
+                                android:id="@+id/play_icon"
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginLeft="7dp"
+                                android:text="@string/play"
+                                android:textColor="#12151C"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:includeFontPadding="false"/>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/hero_save"
+                            android:layout_width="wrap_content"
+                            android:layout_height="32dp"
+                            android:layout_marginLeft="8dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:background="@drawable/btn_ghost"
+                            android:paddingLeft="13dp"
+                            android:paddingRight="15dp"
+                            android:focusable="true"
+                            android:clickable="true">
+
+                            <com.aurora.home.IconView
+                                android:id="@+id/save_icon"
+                                android:layout_width="12dp"
+                                android:layout_height="12dp"/>
+
+                            <TextView
+                                android:id="@+id/hero_save_label"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginLeft="7dp"
+                                android:text="@string/watchlist"
+                                android:textColor="@color/text_primary"
+                                android:textSize="10sp"
+                                android:includeFontPadding="false"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </FrameLayout>
+
+            <FrameLayout
+                android:id="@+id/swipe_panel"
+                android:layout_width="@dimen/swipe_w"
+                android:layout_height="match_parent"
+                android:layout_marginLeft="@dimen/main_gap"
+                android:background="@drawable/glass_panel"
+                android:elevation="10dp"
+                android:tag="glass">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp"
+                    android:paddingTop="11dp"
+                    android:paddingBottom="9dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/for_you"
+                                android:textColor="@color/text_hint"
+                                android:textSize="6.5sp"
+                                android:textStyle="bold"
+                                android:letterSpacing="0.18"
+                                android:includeFontPadding="false"/>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="@string/find_next"
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:maxLines="2"
+                                android:ellipsize="end"
+                                android:lineSpacingExtra="0dp"
+                                android:includeFontPadding="false"/>
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/deck_count"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="1 / 8"
+                            android:textColor="@color/text_hint"
+                            android:textSize="7sp"
+                            android:includeFontPadding="false"/>
+                    </LinearLayout>
+
+                    <com.aurora.home.SwipeDeckView
+                        android:id="@+id/swipe_deck"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:layout_marginTop="5dp"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="28dp"
+                        android:layout_marginTop="3dp"
+                        android:orientation="horizontal"
+                        android:gravity="center">
+
+                        <FrameLayout
+                            android:id="@+id/deck_undo"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:layout_marginRight="7dp"
+                            android:background="@drawable/deck_action_bg"
+                            android:focusable="true"
+                            android:clickable="true">
+
+                            <com.aurora.home.IconView
+                                android:id="@+id/undo_icon"
+                                android:layout_width="14dp"
+                                android:layout_height="14dp"
+                                android:layout_gravity="center"/>
+                        </FrameLayout>
+
+                        <FrameLayout
+                            android:id="@+id/deck_pass"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:layout_marginRight="7dp"
+                            android:background="@drawable/deck_action_bg"
+                            android:focusable="true"
+                            android:clickable="true">
+
+                            <com.aurora.home.IconView
+                                android:id="@+id/pass_icon"
+                                android:layout_width="14dp"
+                                android:layout_height="14dp"
+                                android:layout_gravity="center"/>
+                        </FrameLayout>
+
+                        <FrameLayout
+                            android:id="@+id/deck_save"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:background="@drawable/deck_action_bg"
+                            android:focusable="true"
+                            android:clickable="true">
+
+                            <com.aurora.home.IconView
+                                android:id="@+id/deck_save_icon"
+                                android:layout_width="14dp"
+                                android:layout_height="14dp"
+                                android:layout_gravity="center"/>
+                        </FrameLayout>
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:gravity="center"
+                        android:text="@string/deck_hint"
+                        android:textColor="@color/text_hint"
+                        android:textSize="6.5sp"
+                        android:letterSpacing="0.12"
+                        android:includeFontPadding="false"/>
+                </LinearLayout>
+            </FrameLayout>
+        </LinearLayout>
+
+        <!-- Recommendation rail -->
+        <LinearLayout
+            android:id="@+id/rail_section"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/rail_h"
+            android:layout_marginTop="12dp"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/recommended"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="8sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.2"
+                    android:includeFontPadding="false"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/curated"
+                    android:textColor="@color/text_hint"
+                    android:textSize="7sp"
+                    android:letterSpacing="0.12"
+                    android:includeFontPadding="false"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rail"
+                android:layout_width="match_parent"
+                android:layout_height="62dp"
+                android:layout_marginTop="6dp"
+                android:orientation="horizontal"
+                android:clipChildren="false"
+                android:clipToPadding="false"/>
+        </LinearLayout>
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+
+        <!-- Curated dock -->
+        <LinearLayout
+            android:id="@+id/dock"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/dock_h"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/glass_dock"
+            android:paddingLeft="9dp"
+            android:paddingRight="9dp"
+            android:elevation="12dp"
+            android:tag="glass">
+
+            <LinearLayout
+                android:id="@+id/footer_apps"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:id="@+id/footer_app1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:layout_marginRight="3dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/dock_item_bg"
+                    android:paddingLeft="9dp"
+                    android:paddingRight="9dp"
+                    android:focusable="true"
+                    android:clickable="true">
+
+                    <ImageView
+                        android:id="@+id/footer_app1_icon"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@string/youtube"/>
+
+                    <TextView
+                        android:id="@+id/footer_app1_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="7dp"
+                        android:text="@string/youtube"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="@dimen/footer_app_label_size"
+                        android:includeFontPadding="false"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/footer_app2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:layout_marginRight="3dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/dock_item_bg"
+                    android:paddingLeft="9dp"
+                    android:paddingRight="9dp"
+                    android:focusable="true"
+                    android:clickable="true">
+
+                    <ImageView
+                        android:id="@+id/footer_app2_icon"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@string/netflix"/>
+
+                    <TextView
+                        android:id="@+id/footer_app2_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="7dp"
+                        android:text="@string/netflix"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="@dimen/footer_app_label_size"
+                        android:includeFontPadding="false"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/footer_app3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/dock_item_bg"
+                    android:paddingLeft="9dp"
+                    android:paddingRight="9dp"
+                    android:focusable="true"
+                    android:clickable="true">
+
+                    <ImageView
+                        android:id="@+id/footer_app3_icon"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:contentDescription="@string/prime_video"/>
+
+                    <TextView
+                        android:id="@+id/footer_app3_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="7dp"
+                        android:text="@string/prime_video"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="@dimen/footer_app_label_size"
+                        android:includeFontPadding="false"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/dock_apps"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:layout_marginLeft="3dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/dock_item_bg"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
+                android:focusable="true"
+                android:clickable="true"
+                android:contentDescription="@string/apps">
+
+                <com.aurora.home.IconView
+                    android:id="@+id/dock_apps_icon"
+                    android:layout_width="17dp"
+                    android:layout_height="17dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="7dp"
+                    android:text="@string/apps"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/footer_app_label_size"
+                    android:includeFontPadding="false"/>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/dock_status"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="@string/dock_status"
+                android:textColor="@color/text_hint"
+                android:textSize="7sp"
+                android:letterSpacing="0.16"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:includeFontPadding="false"/>
+
+            <LinearLayout
+                android:id="@+id/dock_settings"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/dock_item_bg"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
+                android:focusable="true"
+                android:clickable="true">
+
+                <com.aurora.home.IconView
+                    android:id="@+id/dock_settings_icon"
+                    android:layout_width="17dp"
+                    android:layout_height="17dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="7dp"
+                    android:text="@string/open_settings"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/footer_app_label_size"
+                    android:includeFontPadding="false"/>
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Screen shell -->
+    <dimen name="screen_pad">32dp</dimen>
+    <dimen name="screen_top">18dp</dimen>
+    <dimen name="screen_bottom">16dp</dimen>
+    <dimen name="topbar_h">46dp</dimen>
+    <dimen name="main_h">272dp</dimen>
+    <dimen name="swipe_w">322dp</dimen>
+    <dimen name="main_gap">14dp</dimen>
+    <dimen name="rail_h">82dp</dimen>
+    <dimen name="dock_h">48dp</dimen>
+
+    <!-- Clock -->
+    <dimen name="clock_hour_size">13sp</dimen>
+    <dimen name="clock_colon_size">14sp</dimen>
+    <dimen name="clock_minute_size">28sp</dimen>
+    <dimen name="clock_ampm_size">5.5sp</dimen>
+    <dimen name="clock_date_size">6sp</dimen>
+
+    <!-- Hero -->
+    <dimen name="hero_title_size">38sp</dimen>
+    <dimen name="hero_meta_size">9sp</dimen>
+    <dimen name="hero_desc_size">10sp</dimen>
+    <dimen name="hero_eyebrow_size">7.5sp</dimen>
+
+    <!-- Settings -->
+    <dimen name="settings_panel_w">740dp</dimen>
+    <dimen name="settings_panel_h">410dp</dimen>
+    <dimen name="settings_sidebar_w">150dp</dimen>
+    <dimen name="settings_row_h">46dp</dimen>
+    <dimen name="settings_row_icon">22dp</dimen>
+    <dimen name="settings_title_size">11sp</dimen>
+    <dimen name="settings_summary_size">8sp</dimen>
+
+    <!-- Legacy names kept for adapters that are still compiled. -->
+    <dimen name="clock_hour_size_legacy">13sp</dimen>
+    <dimen name="app_icon_size">96dp</dimen>
+    <dimen name="app_label_size">14sp</dimen>
+    <dimen name="icon_radius">22dp</dimen>
+    <dimen name="drawer_icon_radius">16dp</dimen>
+    <dimen name="drawer_sheet_h">280dp</dimen>
+    <dimen name="weather_icon_size">18dp</dimen>
+    <dimen name="weather_temp_size">13sp</dimen>
+    <dimen name="weather_cond_size">8sp</dimen>
+    <dimen name="weather_loc_size">7sp</dimen>
+    <dimen name="footer_app_icon_size">24dp</dimen>
+    <dimen name="footer_app_label_size">10sp</dimen>
+    <dimen name="pad_8">8dp</dimen>
+    <dimen name="pad_12">12dp</dimen>
+    <dimen name="pad_16">16dp</dimen>
+    <dimen name="pad_20">20dp</dimen>
+    <dimen name="pad_24">24dp</dimen>
+    <dimen name="pad_28">28dp</dimen>
+    <dimen name="pad_32">32dp</dimen>
+    <dimen name="pad_40">40dp</dimen>
+    <dimen name="text_size_h1">34sp</dimen>
+    <dimen name="text_size_h2">28sp</dimen>
+    <dimen name="text_size_h3">22sp</dimen>
+    <dimen name="text_size_body">16sp</dimen>
+    <dimen name="text_size_caption">12sp</dimen>
+</resources>

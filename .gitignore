@@ -1,0 +1,22 @@
+# Build output
+/build/
+/tools/helper-build/
+*.idsig
+AuroraHome.apk
+AuroraHome.apk.idsig
+
+# Local screenshots and scratch files
+/shots/
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# Local SDK / JDK copies
+/android-sdk/
+/jdk-extract/
