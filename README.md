@@ -106,7 +106,7 @@ Third-party accessibility services are **not** used. Fire OS 5.1.1's `A11yAuthor
 - Launches are debounced for 1.2 s, and polling is skipped whenever OBAA Home is already visible.
 - On Fire OS builds that do define `DISABLE_KEYGUARD`, it also listens for the `CLOSE_SYSTEM_DIALOGS` Home broadcast as a faster path.
 - The stock launcher is **never disabled** and can be restored at any time.
-- The stock launcher may flash briefly before OBAA Home appears.
+- Fire OS throttles background activity starts, so the stock launcher may stay visible for about **4–6 s** on the test AFTT before OBAA Home appears.
 
 ### Enable
 
@@ -141,15 +141,15 @@ On PowerShell:
 
 1. Open YouTube from the dock or the app drawer.
 2. Press the physical **Home** button.
-3. OBAA Home should come to the front after a short stock-launcher flash.
+3. OBAA Home should come to the front after a few seconds of stock launcher.
 
 ```bash
 # Confirm the watcher is running
 adb shell dumpsys activity services com.aurora.home | grep HomeKeyWatcherService
 
-# Confirm Usage access is granted
-adb shell appops get com.aurora.home GET_USAGE_STATS
-# Expected: GET_USAGE_STATS: allow
+# Confirm Usage access is granted (appops get itself is blocked for shell on Fire OS 5.1.1)
+adb shell dumpsys appops | grep -A6 "Package com.aurora.home"
+# Expected: GET_USAGE_STATS: mode=0
 
 # Confirm OBAA Home is the resumed activity after pressing Home
 adb shell dumpsys activity activities | grep mResumedActivity
@@ -171,6 +171,8 @@ launching OBAA Home (poll-usage)
 ```
 
 If the log says `usage access=false`, run the `appops set` command above.
+
+![OBAA Home after the Fire TV Home key](docs/images/home-watcher.png)
 
 ### Recover the stock launcher
 
@@ -313,12 +315,15 @@ Verified on a **Fire TV Stick (AFTT), Fire OS 5.1.1, Android 5.1.1 (API 22), 192
 - ✅ App drawer opens from the dock, focuses the first app and closes with Back
 - ✅ Six-column drawer with YouTube, Prime Video, JioHotstar, Send Files To TV, SmartTube and Xstream Play
 - ✅ YouTube launches from the drawer
+- ✅ Usage-stats Home watcher returns from YouTube and CoCoFlix
+- ✅ Disabling the watcher leaves the stock launcher in place; re-enabling restores OBAA Home
+- ✅ `GET_USAGE_STATS: mode=0` confirmed with `dumpsys appops`
 - ✅ No OBAA/AppDrawer crash in logcat
 - ✅ Stock launcher remains installed and recoverable
 
 **Known limitations**
 
-- Fire OS 5.1.1 hardcodes the stock launcher for the physical Home key. OBAA Home uses a usage-stats watcher, needs a one-time `appops set com.aurora.home GET_USAGE_STATS allow` grant, and may show the stock launcher briefly before returning. Fire OS filters `getRunningAppProcesses()` to the caller, `A11yAuthorizer` blocks third-party accessibility providers, and `DISABLE_KEYGUARD` is undefined, so the process-list check and the Home broadcast are only fast paths on other builds.
+- Fire OS 5.1.1 hardcodes the stock launcher for the physical Home key. OBAA Home uses a usage-stats watcher, needs a one-time `appops set com.aurora.home GET_USAGE_STATS allow` grant, and may show the stock launcher for several seconds before returning. Fire OS also throttles background activity starts, which accounts for most of that delay. `getRunningAppProcesses()` is filtered to the caller, `A11yAuthorizer` blocks third-party accessibility providers, and `DISABLE_KEYGUARD` is undefined, so the process-list check and the Home broadcast are only fast paths on other builds.
 - Netflix is not installed on the test device; its dock tile remains a fallback.
 - Prime Video is listed in the drawer, but the Prime app exits immediately on the test device even when launched directly from Fire OS.
 - Back from YouTube returns to the stock launcher because YouTube opens in its own task; press Home to return to OBAA Home.

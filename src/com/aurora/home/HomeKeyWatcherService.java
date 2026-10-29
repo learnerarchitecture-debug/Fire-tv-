@@ -60,6 +60,7 @@ public class HomeKeyWatcherService extends Service {
     private long lastLaunch;
     private long lastPollLog;
     private boolean polling;
+    private boolean launchPending;
     private boolean usageWarningShown;
     private String lastUsageForeground;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -197,7 +198,10 @@ public class HomeKeyWatcherService extends Service {
     }
 
     private void checkForeground() {
-        if (HomeActivity.isResumed()) return;
+        if (HomeActivity.isResumed()) {
+            launchPending = false;
+            return;
+        }
 
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         if (pm != null && !pm.isScreenOn()) return;
@@ -249,7 +253,11 @@ public class HomeKeyWatcherService extends Service {
         boolean usageSaysLauncher = AMAZON_LAUNCHER.equals(usageForeground);
         if (!processSaysLauncher && !usageSaysLauncher) return;
 
+        // A launch is already in flight; HomeActivity can take several seconds
+        // to become resumed on Fire OS, so stay quiet instead of re-logging.
+        if (launchPending && now - lastLaunch < 6000) return;
         if (now - lastTrigger < LAUNCH_DEBOUNCE_MS) return;
+
         lastTrigger = now;
         Log.i(TAG, "stock launcher foreground (" + (processSaysLauncher ? "process" : "usage")
                 + "), importance=" + launcherImportance
@@ -288,12 +296,17 @@ public class HomeKeyWatcherService extends Service {
     private void launchHome(String why) {
         final long now = SystemClock.uptimeMillis();
         if (now - lastLaunch < 250) return;
+        // HomeActivity can take a few seconds to become resumed on Fire OS.
+        // Do not stack more launches while the first one is still in flight.
+        if (launchPending && now - lastLaunch < 6000) return;
         lastLaunch = now;
+        launchPending = true;
+        Intent home = new Intent(HomeKeyWatcherService.this, HomeActivity.class);
+        home.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                | Intent.FLAG_ACTIVITY_NO_ANIMATION);
         try {
-            Intent home = new Intent(HomeKeyWatcherService.this, HomeActivity.class);
-            home.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                    | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             startActivity(home);
             Log.i(TAG, "launching OBAA Home (" + why + ")");
         } catch (Throwable t) {

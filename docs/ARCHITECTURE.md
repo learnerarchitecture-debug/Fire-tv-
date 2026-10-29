@@ -88,7 +88,7 @@ adb shell appops set com.aurora.home GET_USAGE_STATS allow
 
 Fire OS 5.1.1's `A11yAuthorizer` blocks third-party accessibility providers (`trust=false`), so accessibility is not the Fire TV route. The legacy `HomeAccessibilityService` remains for builds that permit it but is not enabled on 5.1.1.
 
-The stock launcher is never disabled. It may remain visible for roughly 0.5–1.5 s before OBAA Home appears.
+The stock launcher is never disabled. Fire OS throttles background activity starts, so it may remain visible for roughly **4–6 s** on the test AFTT before OBAA Home appears. On builds where the broadcast or process list is allowed, the delay is shorter.
 
 See [FIRETV_DEFAULT_HOME.md](FIRETV_DEFAULT_HOME.md) for the platform investigation and recovery path.
 

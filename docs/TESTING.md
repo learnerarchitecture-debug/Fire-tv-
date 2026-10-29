@@ -61,7 +61,7 @@ Fire OS 5.1.1 blocks third-party accessibility providers, does not define `DISAB
 
    ```bash
    adb shell dumpsys activity services com.aurora.home | grep HomeKeyWatcherService
-   adb shell appops get com.aurora.home GET_USAGE_STATS
+   adb shell dumpsys appops | grep -A6 "Package com.aurora.home"
    ```
 
 3. Start a live log:
@@ -92,7 +92,7 @@ Fire OS 5.1.1 blocks third-party accessibility providers, does not define `DISAB
 
    `importance=-1` is expected: the process list is filtered to OBAA's own UID, so detection comes from usage stats.
 
-5. The stock launcher may remain visible for roughly 0.5–1.5 s before OBAA Home appears. That is expected on Fire OS 5.1.1.
+5. The stock launcher may remain visible for roughly 4–6 s before OBAA Home appears. That is expected on Fire OS 5.1.1: the system throttles background activity starts, so the watcher cannot make the transition instant.
 
 6. Disable the watcher and confirm the stock launcher returns:
 
@@ -133,7 +133,7 @@ adb shell dumpsys package com.aurora.home | grep -E 'versionName|versionCode'
 
 # Home watcher service and Usage access
 adb shell dumpsys activity services com.aurora.home | grep HomeKeyWatcherService
-adb shell appops get com.aurora.home GET_USAGE_STATS
+adb shell dumpsys appops | grep -A6 "Package com.aurora.home"
 
 # Recent app logs
 adb logcat -d | grep -E 'aurora|AppDrawer|HomeKey|AndroidRuntime'
@@ -143,7 +143,7 @@ adb logcat -d | grep -E 'aurora|AppDrawer|HomeKey|AndroidRuntime'
 
 | Issue | Status |
 |---|---|
-| Physical Home key is hardcoded to the stock launcher on Fire OS 5.1.1 | Workaround included: usage-stats watcher plus one-time app-op grant. The stock launcher may remain visible for ~0.5–1.5 s. |
+| Physical Home key is hardcoded to the stock launcher on Fire OS 5.1.1 | Workaround included: usage-stats watcher plus one-time app-op grant. The stock launcher may remain visible for ~4–6 s because Fire OS throttles background activity starts. |
 | `DISABLE_KEYGUARD` broadcast is denied on Fire OS 5.1.1 | The permission is undefined on this firmware; the watcher uses usage stats instead. |
 | `getRunningAppProcesses()` is filtered on Fire OS 5.1.1 | The process list only contains OBAA's UID; detection uses `UsageStatsManager`. |
 | Netflix is not installed on the test device | Dock fallback tile remains; drawer entry appears after installation. |

@@ -85,7 +85,7 @@ adb shell appops set com.aurora.home GET_USAGE_STATS allow
 
 Without the grant, `hasUsageAccess()` returns false and the watcher logs the exact command once. The grant survives normal restarts and updates, but must be repeated after uninstall/reinstall.
 
-The stock launcher is never disabled. It may remain visible for roughly **0.5–1.5 s** while the poll detects it and OBAA Home starts. On builds where the broadcast or process list is allowed, the delay is shorter.
+The stock launcher is never disabled. It may remain visible for roughly **4–6 s** on the test AFTT: Fire OS throttles background activity starts, so the watcher's `startActivity` is queued until the system releases it. On builds where the broadcast or process list is allowed, the delay is shorter.
 
 ## Manifest pieces
 
@@ -135,8 +135,8 @@ No `WRITE_SECURE_SETTINGS` or accessibility grant is required for the watcher.
 # The service should be listed
 adb shell dumpsys activity services com.aurora.home | grep HomeKeyWatcherService
 
-# Usage access should be allowed
-adb shell appops get com.aurora.home GET_USAGE_STATS
+# Usage access should be allowed (mode=0)
+adb shell dumpsys appops | grep -A6 "Package com.aurora.home"
 
 # Watch the watcher
 adb logcat -s HomeKeyWatcherService HomeKeyReceiver
@@ -180,7 +180,7 @@ Or use **OBAA Home → Settings → Apps → Default home → Disable**. The nex
 | `usage foreground=` is empty or stale | UsageStats writes are batched on some builds; wait a second and press Home again. If it stays empty, confirm the app-op grant and that the screen was on. |
 | `launcher importance=-1` | Expected on Fire OS 5.1.1; the process list is filtered to OBAA's UID. Detection uses `usage foreground` instead. |
 | `DISABLE_KEYGUARD` is missing from `dumpsys package` | Expected on Fire OS 5.1.1. The permission is undefined, which is why the broadcast path is not used. |
-| Stock launcher flashes | Expected on Fire OS 5.1.1; the poll interval and launch time determine the flash length. |
+| Stock launcher stays visible for several seconds | Expected on Fire OS 5.1.1; background activity starts are throttled. The watcher starts as soon as usage stats report the launcher. |
 | No `reason=home` log | Expected on Fire OS 5.1.1; the receiver cannot pass the permission check. Use the `poll:` log instead. |
 | Accessibility route is needed | Do not use it on Fire OS 5.1.1; `A11yAuthorizer` blocks third-party providers. Use the usage-stats watcher. |
 

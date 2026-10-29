@@ -36,7 +36,7 @@ echo.
 echo [5/5] Checking the Home watcher...
 timeout /t 2 /nobreak >nul
 %ADB% shell dumpsys activity services com.aurora.home | findstr /i "HomeKeyWatcherService"
-%ADB% shell appops get com.aurora.home GET_USAGE_STATS
+%ADB% shell dumpsys appops | findstr /i /c:"Package com.aurora.home" /c:"GET_USAGE_STATS"
 echo.
 echo The stock launcher may flash briefly, then OBAA Home should appear.
 echo Open YouTube and press Home to test. If the stock launcher remains,

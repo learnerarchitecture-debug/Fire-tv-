@@ -32,7 +32,7 @@
 
 ### Known issues
 
-- Fire OS 5.1.1 hardcodes the stock launcher for the physical Home key; the usage-stats watcher brings OBAA Home back after a brief stock-launcher flash. It needs a one-time `appops set com.aurora.home GET_USAGE_STATS allow` grant. Third-party accessibility providers are blocked by `A11yAuthorizer`, `DISABLE_KEYGUARD` is undefined, and the process list is filtered to OBAA's UID.
+- Fire OS 5.1.1 hardcodes the stock launcher for the physical Home key; the usage-stats watcher brings OBAA Home back after a several-second stock-launcher flash caused by Fire OS background-start throttling. It needs a one-time `appops set com.aurora.home GET_USAGE_STATS allow` grant. Third-party accessibility providers are blocked by `A11yAuthorizer`, `DISABLE_KEYGUARD` is undefined, and the process list is filtered to OBAA's UID.
 - Netflix is not installed on the test Fire TV, so its drawer entry is absent until installed.
 - Prime Video exits immediately on the test device even from Fire OS.
 - YouTube opens in its own task; Back returns to the stock launcher.
@@ -65,6 +65,8 @@ This repository is the first public snapshot of the Fire TV build. Source, resou
 - Confirmed Fire OS 5.1.1 filters `getRunningAppProcesses()` to the caller's UID, so the stock launcher is invisible to a sideloaded app.
 - Added `PACKAGE_USAGE_STATS` and a `UsageStatsManager` query to `HomeKeyWatcherService`; the newest `getLastTimeUsed()` package is compared to `com.amazon.tv.launcher`.
 - Added `hasUsageAccess()` using `AppOpsManager.OPSTR_GET_USAGE_STATS`, plus a one-time log warning with the exact `appops set` command.
-- Added the one-time grant to `tools/setup-firetv-home.bat` and `.ps1`, and the check step now prints `appops get`.
+- Added the one-time grant to `tools/setup-firetv-home.bat` and `.ps1`, and the check step now prints the `dumpsys appops` grant state.
 - Updated Settings → Apps → Default home to show whether Usage access is granted.
 - Kept the process-list check as a fast path on firmware that does not filter it.
+- Verified on the AFTT test device: Home from YouTube and CoCoFlix returns to OBAA Home; `dumpsys appops` reports `GET_USAGE_STATS: mode=0`; disabling the watcher leaves the stock launcher in place and re-enabling restores OBAA.
+- Fire OS throttles background activity starts, so the stock launcher stays visible for about 4–6 s before OBAA Home appears.

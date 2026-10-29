@@ -58,7 +58,7 @@ Press **Back** to close the drawer.
 
 Fire OS 5.1.1 sends the physical Home key directly to the stock launcher, then emits a protected `CLOSE_SYSTEM_DIALOGS` broadcast with `reason=home`. The firmware does not define `DISABLE_KEYGUARD`, so third-party apps cannot receive that broadcast, and it filters `getRunningAppProcesses()` to OBAA's own UID. OBAA Home therefore runs a small foreground watcher that uses `UsageStatsManager` to see when the stock launcher was the most recently used package, then brings OBAA Home back to the front. No accessibility service or root is required.
 
-The stock launcher may remain visible for roughly 0.5–1.5 s before OBAA Home appears. It is never disabled.
+The stock launcher may remain visible for roughly 4–6 s before OBAA Home appears, because Fire OS throttles background activity starts. It is never disabled.
 
 ### Enable
 
@@ -96,8 +96,8 @@ You can also use **Settings → Apps → Default home → Enable now** in OBAA H
 # Watcher service is running
 adb shell dumpsys activity services com.aurora.home | grep HomeKeyWatcherService
 
-# Usage access is granted
-adb shell appops get com.aurora.home GET_USAGE_STATS
+# Usage access is granted (mode=0)
+adb shell dumpsys appops | grep -A6 "Package com.aurora.home"
 
 # Live watcher log
 adb logcat -s HomeKeyWatcherService HomeKeyReceiver
@@ -116,7 +116,7 @@ com.aurora.home/.HomeActivity
 
 1. Open YouTube from the dock or drawer.
 2. Press the physical **Home** button.
-3. OBAA Home should return to the foreground after a short stock-launcher flash. Look for `usage access=true`, `usage foreground=com.amazon.tv.launcher` and `launching OBAA Home (poll-usage)` in logcat.
+3. OBAA Home should return to the foreground after a few seconds of stock launcher. Look for `usage access=true`, `usage foreground=com.amazon.tv.launcher` and `launching OBAA Home (poll-usage)` in logcat.
 
 ## 7. Restore the stock launcher
 
@@ -136,7 +136,7 @@ Or use **OBAA Home → Settings → Apps → Default home → Disable**. The nex
 |---|---|
 | `device offline` | Wake the Fire TV, reconnect with the current IP, and run `adb devices` again. |
 | App drawer does not open | Open it from the **Apps** dock item; the drawer activity is not exported and cannot be started with `am start`. |
-| Home button still opens the stock launcher | Confirm `HomeKeyWatcherService` is running and `adb shell appops get com.aurora.home GET_USAGE_STATS` says `allow`. Check `adb logcat -s HomeKeyWatcherService` for `usage access=true`, `usage foreground=com.amazon.tv.launcher` and `launching OBAA Home (poll-usage)`. See [FIRETV_DEFAULT_HOME.md](FIRETV_DEFAULT_HOME.md). |
+| Home button still opens the stock launcher | Confirm `HomeKeyWatcherService` is running and `adb shell dumpsys appops \| grep -A6 "Package com.aurora.home"` shows `GET_USAGE_STATS: mode=0`. Check `adb logcat -s HomeKeyWatcherService` for `usage access=true`, `usage foreground=com.amazon.tv.launcher` and `launching OBAA Home (poll-usage)`. See [FIRETV_DEFAULT_HOME.md](FIRETV_DEFAULT_HOME.md). |
 | Usage access resets after reinstall | The app-op is tied to the package install. Run `adb shell appops set com.aurora.home GET_USAGE_STATS allow` again after uninstall/reinstall. |
 | Netflix tile is a fallback | Netflix is not installed on the device; install it from the Appstore and reopen the drawer. |
 | Prime Video exits immediately | The Prime app exits on the test device even from Fire OS itself; this is not an OBAA Home crash. |
