@@ -19,6 +19,20 @@ This bypasses the normal `ACTION_MAIN` + `CATEGORY_HOME` resolver. As a result:
 
 The stock launcher therefore remains the effective Home target unless another component reacts to the Home press.
 
+### Removal attempts on AFTT (Fire OS 5.1.1)
+
+The stock launcher was backed up from `/system/priv-app/com.amazon.tv.launcher/com.amazon.tv.launcher.apk` and reinstalling that APK with `pm install -r` returned `Success`, so recovery was verified before any removal attempt. Removal is still blocked for the ADB shell user:
+
+| Command | Result |
+| --- | --- |
+| `pm uninstall --user 0 com.amazon.tv.launcher` | `Failure [DELETE_FAILED_INTERNAL_ERROR]` |
+| `pm uninstall -k --user 0 com.amazon.tv.launcher` | Prints `Success`, but `dumpsys package` still reports `installed=true` |
+| `pm disable com.amazon.tv.launcher` | `SecurityException: Permission Denial ... from uid=2000` |
+| `pm disable-user --user 0 com.amazon.tv.launcher` | Same `SecurityException` |
+| `pm hide com.amazon.tv.launcher` | Reports `new hidden state: false`; package remains visible |
+
+The package is a privileged system app and the shell UID cannot change its state. Removing it requires root or a system-signed package; neither is available here. Do not keep retrying these commands. OBAA Home works alongside the stock launcher via the usage-stats watcher, and the stock launcher remains available as a fallback.
+
 ## What Fire OS actually sends
 
 When Home is pressed, the system log shows `FireTVKeyPolicyManager` sending a protected broadcast:

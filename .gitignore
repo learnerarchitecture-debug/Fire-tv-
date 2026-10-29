@@ -5,6 +5,9 @@
 AuroraHome.apk
 AuroraHome.apk.idsig
 
+# Local device backups (stock launcher APK, package dumps)
+/backup/
+
 # Local screenshots and scratch files
 /shots/
 *.log
