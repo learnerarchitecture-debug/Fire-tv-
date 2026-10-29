@@ -64,23 +64,35 @@ The legacy `HomeAccessibilityService` remains in the source for Fire OS builds t
 
 ## The OBAA Home watcher
 
-`HomeKeyWatcherService` is a lightweight foreground service. It uses the foreground-process list, which is available to normal apps on API 22 without a special permission:
+`HomeKeyWatcherService` is a lightweight foreground service. On Fire OS 5.1.1 it cannot see other apps in `ActivityManager.getRunningAppProcesses()`: AOSP 5.1.1 filters that list to the caller's UID unless the caller holds `REAL_GET_TASKS` or the privileged `GET_TASKS`. A normal sideloaded app holds neither, so the process list only ever contains OBAA Home.
 
-- It polls `ActivityManager.getRunningAppProcesses()` every **500 ms** while the screen is on.
-- It looks for `com.amazon.tv.launcher` with `importance == IMPORTANCE_FOREGROUND`.
-- When found, it starts `HomeActivity` with `NEW_TASK | REORDER_TO_FRONT | SINGLE_TOP`.
+The working route is `UsageStatsManager`, which reports the most recently used package:
+
+- It polls every **500 ms** while the screen is on.
+- `queryUsageStats(INTERVAL_DAILY, now - 6h, now)` is reduced to the entry with the newest `getLastTimeUsed()`.
+- When that package is `com.amazon.tv.launcher`, it starts `HomeActivity` with `NEW_TASK | REORDER_TO_FRONT | SINGLE_TOP`.
+- `getRunningAppProcesses()` is kept as a fast path on firmware that does not filter the list.
 - Polling is skipped whenever `HomeActivity` is already resumed.
 - Launches are debounced for **1.2 s** to avoid duplicate starts.
 - On builds that define `DISABLE_KEYGUARD`, the dynamic `CLOSE_SYSTEM_DIALOGS` receiver provides a faster path.
 - It returns `START_STICKY`, and `HomeKeyReceiver` starts it after boot.
 
-The stock launcher is never disabled. It may remain visible for roughly **0.5–1.5 s** while the poll detects it and OBAA Home starts. On builds where the broadcast is allowed, the delay is shorter.
+Usage statistics need the `PACKAGE_USAGE_STATS` manifest permission **and** a one-time app-op grant:
+
+```bash
+adb shell appops set com.aurora.home GET_USAGE_STATS allow
+```
+
+Without the grant, `hasUsageAccess()` returns false and the watcher logs the exact command once. The grant survives normal restarts and updates, but must be repeated after uninstall/reinstall.
+
+The stock launcher is never disabled. It may remain visible for roughly **0.5–1.5 s** while the poll detects it and OBAA Home starts. On builds where the broadcast or process list is allowed, the delay is shorter.
 
 ## Manifest pieces
 
 ```xml
 <uses-permission android:name="android.permission.DISABLE_KEYGUARD"/>
 <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+<uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"/>
 
 <service
     android:name=".HomeKeyWatcherService"
@@ -102,23 +114,29 @@ The stock launcher is never disabled. It may remain visible for roughly **0.5–
 
 ## Enable
 
-The watcher is enabled by default. Opening OBAA Home starts it. To enable it explicitly:
+The watcher is enabled by default. Opening OBAA Home starts it. Grant Usage access once, then enable it explicitly:
 
 ```bash
+# Required on Fire OS 5.1.1: lets the watcher read recent package usage
+adb shell appops set com.aurora.home GET_USAGE_STATS allow
+
 adb shell am broadcast \
   -a com.aurora.home.ENABLE_HOME_KEY \
   -n com.aurora.home/.HomeKeyReceiver
 ```
 
-Or use **OBAA Home → Settings → Apps → Default home → Enable now**.
+Or use **OBAA Home → Settings → Apps → Default home → Enable now**; the dialog shows whether Usage access is granted.
 
-No `WRITE_SECURE_SETTINGS` grant is required for the watcher.
+No `WRITE_SECURE_SETTINGS` or accessibility grant is required for the watcher.
 
 ## Verify
 
 ```bash
 # The service should be listed
 adb shell dumpsys activity services com.aurora.home | grep HomeKeyWatcherService
+
+# Usage access should be allowed
+adb shell appops get com.aurora.home GET_USAGE_STATS
 
 # Watch the watcher
 adb logcat -s HomeKeyWatcherService HomeKeyReceiver
@@ -131,13 +149,14 @@ adb shell dumpsys activity activities | grep mResumedActivity
 Expected log lines:
 
 ```text
-I/HomeKeyWatcherService: watching for Home (broadcast + foreground poll)
-I/HomeKeyWatcherService: poll: 142 processes, launcher importance=300
-I/HomeKeyWatcherService: stock launcher foreground, importance=100
-I/HomeKeyWatcherService: launching OBAA Home (poll)
+I/HomeKeyWatcherService: watching for Home (broadcast + usage stats)
+I/HomeKeyWatcherService: poll: 1 processes, launcher importance=-1, usage access=true, usage foreground=com.amazon.tv.launcher
+I/HomeKeyWatcherService: usage foreground=com.amazon.tv.launcher
+I/HomeKeyWatcherService: stock launcher foreground (usage), importance=-1, usage=com.amazon.tv.launcher
+I/HomeKeyWatcherService: launching OBAA Home (poll-usage)
 ```
 
-`launcher importance=100` is `IMPORTANCE_FOREGROUND`; `300` is a background service. The exact process count varies by device.
+`launcher importance=-1` is expected on Fire OS 5.1.1 because the process list is filtered; detection comes from `usage foreground`. On firmware that exposes the process list, `importance=100` (`IMPORTANCE_FOREGROUND`) takes the `poll-process` fast path instead.
 
 ## Recovery
 
@@ -155,18 +174,21 @@ Or use **OBAA Home → Settings → Apps → Default home → Disable**. The nex
 
 | Symptom | Check |
 |---|---|
-| Home still opens the stock launcher | Confirm `HomeKeyWatcherService` is running: `adb shell dumpsys activity services com.aurora.home \| grep HomeKeyWatcherService`. Then watch `adb logcat -s HomeKeyWatcherService`. A `poll:` line with `launcher importance=100` means detection is working. |
-| `poll:` never appears | The watcher is not running, the screen is off, or `getRunningAppProcesses()` is filtered on your firmware. Open OBAA Home once and retry. |
-| `launcher importance=-1` | The stock launcher process is not in the returned list. This firmware may restrict the process list; try the broadcast fast path or document the firmware. |
+| Home still opens the stock launcher | Confirm `HomeKeyWatcherService` is running: `adb shell dumpsys activity services com.aurora.home \| grep HomeKeyWatcherService`. Watch `adb logcat -s HomeKeyWatcherService`. A `poll:` line with `usage access=true` and `usage foreground=com.amazon.tv.launcher` means detection is working. |
+| `usage access=false` | Grant the app op: `adb shell appops set com.aurora.home GET_USAGE_STATS allow`. Then reopen OBAA Home. |
+| `poll:` never appears | The watcher is not running or the screen is off. Open OBAA Home once and retry. |
+| `usage foreground=` is empty or stale | UsageStats writes are batched on some builds; wait a second and press Home again. If it stays empty, confirm the app-op grant and that the screen was on. |
+| `launcher importance=-1` | Expected on Fire OS 5.1.1; the process list is filtered to OBAA's UID. Detection uses `usage foreground` instead. |
 | `DISABLE_KEYGUARD` is missing from `dumpsys package` | Expected on Fire OS 5.1.1. The permission is undefined, which is why the broadcast path is not used. |
 | Stock launcher flashes | Expected on Fire OS 5.1.1; the poll interval and launch time determine the flash length. |
 | No `reason=home` log | Expected on Fire OS 5.1.1; the receiver cannot pass the permission check. Use the `poll:` log instead. |
-| Accessibility route is needed | Do not use it on Fire OS 5.1.1; `A11yAuthorizer` blocks third-party providers. Use the foreground watcher. |
+| Accessibility route is needed | Do not use it on Fire OS 5.1.1; `A11yAuthorizer` blocks third-party providers. Use the usage-stats watcher. |
 
 ## Security and scope
 
 - The watcher does not use accessibility and does not read screen content.
-- It only checks process names and foreground importance; it does not inspect app data.
+- Usage access is used only to read package names and `getLastTimeUsed()` timestamps; OBAA does not inspect app data or usage history beyond the newest entry.
 - Polling runs only while the screen is on and stops when OBAA Home is resumed.
 - It collects no data and sends nothing off-device.
 - The stock launcher remains installed and recoverable at all times.
+- The app-op grant can be revoked with `adb shell appops set com.aurora.home GET_USAGE_STATS deny`.

@@ -34,7 +34,7 @@
 | 🚀 **Curated dock** | YouTube, Netflix and Prime Video in the footer. Missing apps keep a graceful fallback tile. |
 | 📱 **Bottom app drawer** | A translucent six-column sheet with launchable third-party apps and curated main apps. Main apps are pinned first; Fire OS system apps are hidden. |
 | 🎛️ **Full settings** | General, Appearance, Network, Display & Sound, Apps, Privacy and About panes, all reachable from the D-pad. |
-| 🏠 **Fire TV Home support** | A lightweight watcher detects the stock launcher and brings OBAA Home to the front. No accessibility service or root is required, and the stock launcher remains installed and recoverable. |
+| 🏠 **Fire TV Home support** | A lightweight usage-stats watcher detects the stock launcher and brings OBAA Home to the front. One-time ADB app-op grant; no accessibility service or root. The stock launcher remains installed and recoverable. |
 | 🎨 **On-device artwork** | Icons, posters and the aurora background are drawn locally. No artwork download is required. |
 | 🔒 **Local by default** | No analytics. Weather comes directly from Open-Meteo. Preferences live in the `aurora` preference file. |
 
@@ -93,15 +93,16 @@ Or open **OBAA Home** from the Fire TV app list.
 
 Fire OS 5.1.1 does **not** provide a normal “default launcher” picker. The physical Home key is handled by `FireTVKeyPolicyManager`, which starts the stock launcher directly. Fire OS also sends a protected `CLOSE_SYSTEM_DIALOGS` broadcast with `reason=home`, but this firmware does not define `DISABLE_KEYGUARD` for third-party apps, so OBAA cannot receive that broadcast.
 
-OBAA Home therefore uses a lightweight foreground watcher. While the screen is on, `HomeKeyWatcherService` checks whether `com.amazon.tv.launcher` is the foreground process; when it is, OBAA Home is started on top. The stock launcher is never disabled and can be restored at any time.
+OBAA Home therefore uses a lightweight usage-stats watcher. While the screen is on, `HomeKeyWatcherService` asks `UsageStatsManager` which package was most recently used. When that package is `com.amazon.tv.launcher`, OBAA Home is started on top. On Fire OS 5.1.1 the system hides other apps from `getRunningAppProcesses()`, so the usage-stats route needs a **one-time ADB app-op grant**. The stock launcher is never disabled and can be restored at any time.
 
 Third-party accessibility services are **not** used. Fire OS 5.1.1's `A11yAuthorizer` blocks providers that are not signed by Amazon (`trust=false`).
 
 ### How the Home hook works
 
 - **`HomeKeyWatcherService`** runs as a small foreground service.
-- It polls the running-process list every 500 ms while the screen is on.
-- When the stock launcher becomes the foreground process, it opens `HomeActivity`.
+- It polls every 500 ms while the screen is on.
+- `UsageStatsManager` reports the most recently used package; when it is the stock launcher, the watcher opens `HomeActivity`.
+- On firmware that does not filter the process list, `getRunningAppProcesses()` is kept as a faster in-memory check.
 - Launches are debounced for 1.2 s, and polling is skipped whenever OBAA Home is already visible.
 - On Fire OS builds that do define `DISABLE_KEYGUARD`, it also listens for the `CLOSE_SYSTEM_DIALOGS` Home broadcast as a faster path.
 - The stock launcher is **never disabled** and can be restored at any time.
@@ -109,19 +110,22 @@ Third-party accessibility services are **not** used. Fire OS 5.1.1's `A11yAuthor
 
 ### Enable
 
-Installing and opening OBAA Home starts the watcher automatically. To enable it explicitly:
+Installing and opening OBAA Home starts the watcher automatically. Grant Usage access once, then enable it explicitly:
 
 ```bash
+# One-time grant: lets the watcher see which app is in front on Fire OS 5.1.1
+adb shell appops set com.aurora.home GET_USAGE_STATS allow
+
 adb shell am broadcast \
   -a com.aurora.home.ENABLE_HOME_KEY \
   -n com.aurora.home/.HomeKeyReceiver
 ```
 
-No `WRITE_SECURE_SETTINGS` grant is required for the watcher.
+No `WRITE_SECURE_SETTINGS` or accessibility grant is required.
 
-Or use **OBAA Home → Settings → Apps → Default home → Enable now**.
+Or use **OBAA Home → Settings → Apps → Default home → Enable now**; the dialog shows whether Usage access is already granted.
 
-The included helper does the install and enable steps:
+The included helper does the install, grant, start and enable steps:
 
 ```bat
 tools\setup-firetv-home.bat
@@ -143,6 +147,10 @@ On PowerShell:
 # Confirm the watcher is running
 adb shell dumpsys activity services com.aurora.home | grep HomeKeyWatcherService
 
+# Confirm Usage access is granted
+adb shell appops get com.aurora.home GET_USAGE_STATS
+# Expected: GET_USAGE_STATS: allow
+
 # Confirm OBAA Home is the resumed activity after pressing Home
 adb shell dumpsys activity activities | grep mResumedActivity
 # Expected: com.aurora.home/.HomeActivity
@@ -153,6 +161,16 @@ Watch the watcher live:
 ```bash
 adb logcat -s HomeKeyWatcherService HomeKeyReceiver
 ```
+
+Expected after pressing Home:
+
+```text
+poll: ... usage access=true, usage foreground=com.amazon.tv.launcher
+stock launcher foreground (usage), importance=-1, usage=com.amazon.tv.launcher
+launching OBAA Home (poll-usage)
+```
+
+If the log says `usage access=false`, run the `appops set` command above.
 
 ### Recover the stock launcher
 
@@ -166,7 +184,7 @@ adb shell am broadcast \
 
 Or use **OBAA Home → Settings → Apps → Default home → Disable**. The next Home press returns to Fire OS normally. Uninstalling OBAA Home also removes the watcher.
 
-> **Compatibility note:** Fire OS 5.1.1 blocks sideloaded accessibility providers, so FTVLaunchX and similar accessibility-based hooks cannot bind on this firmware. OBAA Home uses a foreground-process watcher instead. See [docs/FIRETV_DEFAULT_HOME.md](docs/FIRETV_DEFAULT_HOME.md) for the technical details.
+> **Compatibility note:** Fire OS 5.1.1 blocks sideloaded accessibility providers, so FTVLaunchX and similar accessibility-based hooks cannot bind on this firmware. OBAA Home uses a usage-stats watcher instead. The app-op grant survives normal restarts but must be repeated after uninstall/reinstall. See [docs/FIRETV_DEFAULT_HOME.md](docs/FIRETV_DEFAULT_HOME.md) for the technical details.
 
 ---
 
@@ -225,7 +243,7 @@ aurora-home/
 │   ├── AppDrawerActivity.java   # Bottom-sheet app drawer
 │   ├── AppGridAdapter.java      # Six-column app grid and focus animation
 │   ├── SettingsActivity.java    # Seven-pane settings experience
-│   ├── HomeKeyWatcherService.java # Fire OS foreground Home watcher
+│   ├── HomeKeyWatcherService.java # Fire OS usage-stats Home watcher
 │   ├── HomeAccessibilityService.java # Optional legacy accessibility route
 │   ├── HomeKeyReceiver.java     # Enable/disable and boot helper
 │   ├── SwipeDeckView.java       # Recommendation deck gestures and D-pad
@@ -300,7 +318,7 @@ Verified on a **Fire TV Stick (AFTT), Fire OS 5.1.1, Android 5.1.1 (API 22), 192
 
 **Known limitations**
 
-- Fire OS 5.1.1 hardcodes the stock launcher for the physical Home key. OBAA Home uses a foreground-process watcher and may show the stock launcher briefly before returning. Fire OS's `A11yAuthorizer` blocks third-party accessibility providers on this firmware, and `DISABLE_KEYGUARD` is undefined, so accessibility-based hooks and the Home broadcast cannot be used.
+- Fire OS 5.1.1 hardcodes the stock launcher for the physical Home key. OBAA Home uses a usage-stats watcher, needs a one-time `appops set com.aurora.home GET_USAGE_STATS allow` grant, and may show the stock launcher briefly before returning. Fire OS filters `getRunningAppProcesses()` to the caller, `A11yAuthorizer` blocks third-party accessibility providers, and `DISABLE_KEYGUARD` is undefined, so the process-list check and the Home broadcast are only fast paths on other builds.
 - Netflix is not installed on the test device; its dock tile remains a fallback.
 - Prime Video is listed in the drawer, but the Prime app exits immediately on the test device even when launched directly from Fire OS.
 - Back from YouTube returns to the stock launcher because YouTube opens in its own task; press Home to return to OBAA Home.
@@ -316,7 +334,7 @@ See [docs/TESTING.md](docs/TESTING.md) for the full manual test checklist.
 - [x] D-pad-first focus and navigation
 - [x] Recommendation deck with save/pass/undo
 - [x] Bottom app drawer with curated and third-party apps
-- [x] Fire TV foreground Home watcher
+- [x] Fire TV Home watcher with usage-stats detection
 - [ ] Verify Home-key watcher across more Fire OS versions
 - [ ] Optional long-press Home menu integration
 - [ ] Android TV variant: **OBAA Smart TV**

@@ -16,22 +16,27 @@ if not exist "%APK%" (
 )
 
 echo.
-echo [1/4] Installing OBAA Home...
+echo [1/5] Installing OBAA Home...
 %ADB% install -r "%APK%"
 if errorlevel 1 goto :failed
 
 echo.
-echo [2/4] Starting OBAA Home...
+echo [2/5] Granting Usage access (one-time)...
+%ADB% shell appops set com.aurora.home GET_USAGE_STATS allow
+
+echo.
+echo [3/5] Starting OBAA Home...
 %ADB% shell am start -n com.aurora.home/.HomeActivity
 
 echo.
-echo [3/4] Enabling the OBAA Home watcher...
+echo [4/5] Enabling the OBAA Home watcher...
 %ADB% shell am broadcast -a com.aurora.home.ENABLE_HOME_KEY -n com.aurora.home/.HomeKeyReceiver
 
 echo.
-echo [4/4] Checking the Home watcher...
+echo [5/5] Checking the Home watcher...
 timeout /t 2 /nobreak >nul
 %ADB% shell dumpsys activity services com.aurora.home | findstr /i "HomeKeyWatcherService"
+%ADB% shell appops get com.aurora.home GET_USAGE_STATS
 echo.
 echo The stock launcher may flash briefly, then OBAA Home should appear.
 echo Open YouTube and press Home to test. If the stock launcher remains,

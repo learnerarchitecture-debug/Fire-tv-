@@ -16,7 +16,7 @@
 - Fire OS system apps and OBAA Home excluded from the drawer.
 - Prime Video label override for `com.amazon.avod`.
 - Full settings surface: General, Appearance, Network, Display & Sound, Apps, Privacy, About.
-- Fire TV Home watcher using a foreground-process check, with the protected `CLOSE_SYSTEM_DIALOGS` broadcast as a fast path on compatible builds; no accessibility service required.
+- Fire TV Home watcher using `UsageStatsManager` (with a process-list fast path on permissive builds), plus the protected `CLOSE_SYSTEM_DIALOGS` broadcast on compatible builds; no accessibility service required.
 - Optional legacy Fire TV accessibility service for builds that permit third-party providers.
 - On-device generated icons, posters and aurora backgrounds.
 - Raw `aapt2` → `javac` → `d8` → `zipalign` → `apksigner` build pipeline.
@@ -32,7 +32,7 @@
 
 ### Known issues
 
-- Fire OS 5.1.1 hardcodes the stock launcher for the physical Home key; the foreground watcher brings OBAA Home back after a brief stock-launcher flash. Third-party accessibility providers are blocked by `A11yAuthorizer`, and `DISABLE_KEYGUARD` is undefined on this firmware.
+- Fire OS 5.1.1 hardcodes the stock launcher for the physical Home key; the usage-stats watcher brings OBAA Home back after a brief stock-launcher flash. It needs a one-time `appops set com.aurora.home GET_USAGE_STATS allow` grant. Third-party accessibility providers are blocked by `A11yAuthorizer`, `DISABLE_KEYGUARD` is undefined, and the process list is filtered to OBAA's UID.
 - Netflix is not installed on the test Fire TV, so its drawer entry is absent until installed.
 - Prime Video exits immediately on the test device even from Fire OS.
 - YouTube opens in its own task; Back returns to the stock launcher.
@@ -52,10 +52,19 @@ This repository is the first public snapshot of the Fire TV build. Source, resou
 
 - Confirmed Fire OS 5.1.1 blocks third-party accessibility providers in `A11yAuthorizer` (`trust=false`).
 - Confirmed Fire OS 5.1.1 does not define `DISABLE_KEYGUARD`, so the protected `CLOSE_SYSTEM_DIALOGS` broadcast with `reason=home` is denied to OBAA and other sideloaded apps.
-- Added `HomeKeyWatcherService`, a foreground service that polls `getRunningAppProcesses()` every 500 ms while the screen is on and detects `com.amazon.tv.launcher` at `IMPORTANCE_FOREGROUND`.
+- Added `HomeKeyWatcherService`, a foreground service that polls every 500 ms while the screen is on.
 - Kept a dynamic `CLOSE_SYSTEM_DIALOGS` receiver as a fast path on builds that do define `DISABLE_KEYGUARD`.
 - Added `DISABLE_KEYGUARD` and `RECEIVE_BOOT_COMPLETED` permissions.
 - Polling is skipped when `HomeActivity` is resumed; launches are debounced for 1.2 s.
 - Added boot restart through `HomeKeyReceiver`.
 - Removed the `WRITE_SECURE_SETTINGS` requirement from the Home-key setup path.
-- Updated the setup scripts, settings dialog and documentation for the foreground watcher.
+- Updated the setup scripts, settings dialog and documentation for the Home watcher.
+
+### Usage-stats Home fallback
+
+- Confirmed Fire OS 5.1.1 filters `getRunningAppProcesses()` to the caller's UID, so the stock launcher is invisible to a sideloaded app.
+- Added `PACKAGE_USAGE_STATS` and a `UsageStatsManager` query to `HomeKeyWatcherService`; the newest `getLastTimeUsed()` package is compared to `com.amazon.tv.launcher`.
+- Added `hasUsageAccess()` using `AppOpsManager.OPSTR_GET_USAGE_STATS`, plus a one-time log warning with the exact `appops set` command.
+- Added the one-time grant to `tools/setup-firetv-home.bat` and `.ps1`, and the check step now prints `appops get`.
+- Updated Settings → Apps → Default home to show whether Usage access is granted.
+- Kept the process-list check as a fast path on firmware that does not filter it.

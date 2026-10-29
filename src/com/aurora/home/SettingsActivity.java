@@ -1167,11 +1167,26 @@ public class SettingsActivity extends Activity {
 
     private void showDefaultHomeDialog() {
         final boolean enabled = HomeKeyReceiver.isEnabled(this);
+        final boolean usageAccess = HomeKeyWatcherService.hasUsageAccess(this);
+        String message;
+        if (!enabled) {
+            message = getString(R.string.default_home_hint);
+        } else if (!usageAccess) {
+            message = "The Home watcher is on, but Usage access is missing. "
+                    + "Fire OS 5.1.1 hides the stock launcher from normal apps, so "
+                    + "OBAA Home needs this one-time grant from a computer:\n\n"
+                    + "adb shell appops set com.aurora.home GET_USAGE_STATS allow\n\n"
+                    + "After granting it, press Home once. The stock launcher stays "
+                    + "installed and can be restored here at any time.";
+        } else {
+            message = "OBAA Home is handling the Fire TV Home button. "
+                    + "Usage access is granted, so the watcher can see when the "
+                    + "stock launcher appears. The stock launcher remains installed "
+                    + "and can be restored here at any time.";
+        }
         dialogBuilder()
                 .setTitle("Default home")
-                .setMessage(enabled
-                        ? "OBAA Home is handling the Fire TV Home button. The stock launcher remains installed and can be restored here at any time."
-                        : getString(R.string.default_home_hint))
+                .setMessage(message)
                 .setPositiveButton(enabled ? "Disable" : "Enable now",
                         new DialogInterface.OnClickListener() {
                             @Override

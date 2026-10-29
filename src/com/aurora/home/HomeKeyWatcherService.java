@@ -1,9 +1,12 @@
 package com.aurora.home;
 
 import android.app.ActivityManager;
+import android.app.AppOpsManager;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.app.usage.UsageStats;
+import android.app.usage.UsageStatsManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -13,6 +16,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.Process;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -26,10 +30,13 @@ import java.util.List;
  * which this firmware does not define for third-party apps.  The broadcast
  * receiver is kept as a fast path for Fire OS builds that do allow it.
  *
- * The compatible route is a lightweight foreground poll.  The service checks
- * whether com.amazon.tv.launcher is the foreground process; when it is, OBAA
- * Home is started on top.  Polling only runs while the screen is on and stops
- * as soon as HomeActivity is resumed, so it is idle whenever OBAA is visible.
+ * The compatible route is a lightweight foreground poll.  Fire OS 5.1.1
+ * filters ActivityManager.getRunningAppProcesses() to the caller's own UID,
+ * so the service also reads UsageStatsManager (granted once with
+ * "adb shell appops set com.aurora.home GET_USAGE_STATS allow").  When the
+ * stock launcher is the most recently used app, OBAA Home is started on top.
+ * Polling only runs while the screen is on and stops as soon as HomeActivity
+ * is resumed, so it is idle whenever OBAA is visible.
  *
  * The stock launcher is never disabled and can be restored by disabling this
  * service.
@@ -45,6 +52,7 @@ public class HomeKeyWatcherService extends Service {
     private static final long LAUNCH_RETRY_MS = 1100;
     private static final long LAUNCH_DEBOUNCE_MS = 1200;
     private static final long POLL_INTERVAL_MS = 500;
+    private static final long USAGE_WINDOW_MS = 6L * 60L * 60L * 1000L;
     private static final int NOTIFICATION_ID = 42;
 
     private BroadcastReceiver receiver;
@@ -52,6 +60,8 @@ public class HomeKeyWatcherService extends Service {
     private long lastLaunch;
     private long lastPollLog;
     private boolean polling;
+    private boolean usageWarningShown;
+    private String lastUsageForeground;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     private final Runnable poller = new Runnable() {
@@ -87,6 +97,26 @@ public class HomeKeyWatcherService extends Service {
         }
     }
 
+    /**
+     * True when the one-time ADB app-op grant for usage statistics is present.
+     * PACKAGE_USAGE_STATS alone is not enough on Fire OS; the app op must be
+     * allowed with:
+     *   adb shell appops set com.aurora.home GET_USAGE_STATS allow
+     */
+    public static boolean hasUsageAccess(Context context) {
+        try {
+            AppOpsManager appOps =
+                    (AppOpsManager) context.getSystemService(Context.APP_OPS_SERVICE);
+            if (appOps == null) return false;
+            int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    Process.myUid(), context.getPackageName());
+            return mode == AppOpsManager.MODE_ALLOWED;
+        } catch (Throwable t) {
+            Log.w(TAG, "usage access check failed", t);
+            return false;
+        }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -113,7 +143,7 @@ public class HomeKeyWatcherService extends Service {
 
         polling = true;
         handler.post(poller);
-        Log.i(TAG, "watching for Home (broadcast + foreground poll)");
+        Log.i(TAG, "watching for Home (broadcast + usage stats)");
     }
 
     @Override
@@ -172,40 +202,87 @@ public class HomeKeyWatcherService extends Service {
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         if (pm != null && !pm.isScreenOn()) return;
 
-        ActivityManager am = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
-        if (am == null) return;
-
-        List<ActivityManager.RunningAppProcessInfo> processes;
-        try {
-            processes = am.getRunningAppProcesses();
-        } catch (Throwable t) {
-            return;
-        }
-        if (processes == null) return;
-
         int launcherImportance = -1;
-        for (int i = 0; i < processes.size(); i++) {
-            ActivityManager.RunningAppProcessInfo process = processes.get(i);
-            if (process != null && AMAZON_LAUNCHER.equals(process.processName)) {
-                launcherImportance = process.importance;
-                break;
+        int processCount = 0;
+        ActivityManager am = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+        if (am != null) {
+            try {
+                List<ActivityManager.RunningAppProcessInfo> processes =
+                        am.getRunningAppProcesses();
+                if (processes != null) {
+                    processCount = processes.size();
+                    for (int i = 0; i < processes.size(); i++) {
+                        ActivityManager.RunningAppProcessInfo process = processes.get(i);
+                        if (process != null && AMAZON_LAUNCHER.equals(process.processName)) {
+                            launcherImportance = process.importance;
+                            break;
+                        }
+                    }
+                }
+            } catch (Throwable t) {
+                Log.w(TAG, "process list unavailable", t);
             }
         }
+
+        boolean usageAccess = hasUsageAccess(this);
+        String usageForeground = usageAccess ? currentForegroundPackage() : null;
 
         final long now = SystemClock.uptimeMillis();
         if (now - lastPollLog > 10000) {
             lastPollLog = now;
-            Log.i(TAG, "poll: " + processes.size()
-                    + " processes, launcher importance=" + launcherImportance);
+            Log.i(TAG, "poll: " + processCount + " processes, launcher importance="
+                    + launcherImportance + ", usage access=" + usageAccess
+                    + ", usage foreground=" + usageForeground);
+        }
+        if (!usageAccess && !usageWarningShown) {
+            usageWarningShown = true;
+            Log.w(TAG, "usage access missing; run: adb shell appops set "
+                    + getPackageName() + " GET_USAGE_STATS allow");
+        }
+        if (usageForeground != null && !usageForeground.equals(lastUsageForeground)) {
+            lastUsageForeground = usageForeground;
+            Log.i(TAG, "usage foreground=" + usageForeground);
         }
 
-        if (launcherImportance != ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
-            return;
-        }
+        boolean processSaysLauncher =
+                launcherImportance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND;
+        boolean usageSaysLauncher = AMAZON_LAUNCHER.equals(usageForeground);
+        if (!processSaysLauncher && !usageSaysLauncher) return;
+
         if (now - lastTrigger < LAUNCH_DEBOUNCE_MS) return;
         lastTrigger = now;
-        Log.i(TAG, "stock launcher foreground, importance=" + launcherImportance);
-        launchHome("poll");
+        Log.i(TAG, "stock launcher foreground (" + (processSaysLauncher ? "process" : "usage")
+                + "), importance=" + launcherImportance
+                + ", usage=" + usageForeground);
+        launchHome(processSaysLauncher ? "poll-process" : "poll-usage");
+    }
+
+    /**
+     * Most recently used package, from UsageStatsManager.  Returns null when
+     * usage access is missing or the query fails.
+     */
+    private String currentForegroundPackage() {
+        try {
+            UsageStatsManager usm =
+                    (UsageStatsManager) getSystemService(Context.USAGE_STATS_SERVICE);
+            if (usm == null) return null;
+            long now = System.currentTimeMillis();
+            List<UsageStats> stats = usm.queryUsageStats(
+                    UsageStatsManager.INTERVAL_DAILY, now - USAGE_WINDOW_MS, now);
+            if (stats == null || stats.isEmpty()) return null;
+            UsageStats best = null;
+            for (int i = 0; i < stats.size(); i++) {
+                UsageStats stat = stats.get(i);
+                if (stat == null) continue;
+                if (best == null || stat.getLastTimeUsed() > best.getLastTimeUsed()) {
+                    best = stat;
+                }
+            }
+            return best == null ? null : best.getPackageName();
+        } catch (Throwable t) {
+            Log.w(TAG, "usage stats query failed", t);
+            return null;
+        }
     }
 
     private void launchHome(String why) {

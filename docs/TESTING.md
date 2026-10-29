@@ -49,14 +49,19 @@ Expected result: `HomeActivity` is resumed and the **Apps** dock item is focused
 
 ## Home-key watcher checklist
 
-Fire OS 5.1.1 blocks third-party accessibility providers and does not define `DISABLE_KEYGUARD`, so the Home route uses a foreground-process watcher instead of the broadcast. Verify:
+Fire OS 5.1.1 blocks third-party accessibility providers, does not define `DISABLE_KEYGUARD`, and filters `getRunningAppProcesses()` to OBAA's UID. The Home route therefore uses `UsageStatsManager`, which needs a one-time app-op grant. Verify:
 
-1. Open OBAA Home once. This starts the watcher automatically.
+1. Grant Usage access and open OBAA Home once. Opening starts the watcher automatically:
 
-2. Confirm the service is running:
+   ```bash
+   adb shell appops set com.aurora.home GET_USAGE_STATS allow
+   ```
+
+2. Confirm the service is running and the grant is present:
 
    ```bash
    adb shell dumpsys activity services com.aurora.home | grep HomeKeyWatcherService
+   adb shell appops get com.aurora.home GET_USAGE_STATS
    ```
 
 3. Start a live log:
@@ -80,10 +85,12 @@ Fire OS 5.1.1 blocks third-party accessibility providers and does not define `DI
    Expected log:
 
    ```text
-   I/HomeKeyWatcherService: poll: ... launcher importance=100
-   I/HomeKeyWatcherService: stock launcher foreground, importance=100
-   I/HomeKeyWatcherService: launching OBAA Home (poll)
+   I/HomeKeyWatcherService: poll: ... usage access=true, usage foreground=com.amazon.tv.launcher
+   I/HomeKeyWatcherService: stock launcher foreground (usage), importance=-1, usage=com.amazon.tv.launcher
+   I/HomeKeyWatcherService: launching OBAA Home (poll-usage)
    ```
+
+   `importance=-1` is expected: the process list is filtered to OBAA's own UID, so detection comes from usage stats.
 
 5. The stock launcher may remain visible for roughly 0.5–1.5 s before OBAA Home appears. That is expected on Fire OS 5.1.1.
 
@@ -103,6 +110,16 @@ Fire OS 5.1.1 blocks third-party accessibility providers and does not define `DI
      -n com.aurora.home/.HomeKeyReceiver
    ```
 
+8. Revoke Usage access and confirm the watcher logs the missing-grant warning once:
+
+   ```bash
+   adb shell appops set com.aurora.home GET_USAGE_STATS deny
+   adb logcat -s HomeKeyWatcherService
+   # usage access missing; run: adb shell appops set com.aurora.home GET_USAGE_STATS allow
+   ```
+
+   Restore it with `allow` afterwards.
+
 > Fire OS 5.1.1's `A11yAuthorizer` rejects sideloaded accessibility providers (`trust=false`). Do not expect FTVLaunchX or `HomeAccessibilityService` to bind on this firmware. See [FIRETV_DEFAULT_HOME.md](FIRETV_DEFAULT_HOME.md).
 
 ## Useful ADB checks
@@ -114,8 +131,9 @@ adb shell dumpsys activity activities | grep mResumedActivity
 # Package and version
 adb shell dumpsys package com.aurora.home | grep -E 'versionName|versionCode'
 
-# Home watcher service
+# Home watcher service and Usage access
 adb shell dumpsys activity services com.aurora.home | grep HomeKeyWatcherService
+adb shell appops get com.aurora.home GET_USAGE_STATS
 
 # Recent app logs
 adb logcat -d | grep -E 'aurora|AppDrawer|HomeKey|AndroidRuntime'
@@ -125,8 +143,9 @@ adb logcat -d | grep -E 'aurora|AppDrawer|HomeKey|AndroidRuntime'
 
 | Issue | Status |
 |---|---|
-| Physical Home key is hardcoded to the stock launcher on Fire OS 5.1.1 | Workaround included: foreground-process watcher. The stock launcher may remain visible for ~0.5–1.5 s. |
-| `DISABLE_KEYGUARD` broadcast is denied on Fire OS 5.1.1 | The permission is undefined on this firmware; the watcher uses process polling instead. |
+| Physical Home key is hardcoded to the stock launcher on Fire OS 5.1.1 | Workaround included: usage-stats watcher plus one-time app-op grant. The stock launcher may remain visible for ~0.5–1.5 s. |
+| `DISABLE_KEYGUARD` broadcast is denied on Fire OS 5.1.1 | The permission is undefined on this firmware; the watcher uses usage stats instead. |
+| `getRunningAppProcesses()` is filtered on Fire OS 5.1.1 | The process list only contains OBAA's UID; detection uses `UsageStatsManager`. |
 | Netflix is not installed on the test device | Dock fallback tile remains; drawer entry appears after installation. |
 | Prime Video exits immediately on the test device | Reproduced from Fire OS itself; not an OBAA Home crash. |
 | YouTube opens in its own task | Back returns to the stock launcher; press Home to return to OBAA Home. |

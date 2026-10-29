@@ -9,7 +9,7 @@ OBAA Home is a single-module Android app with a raw resource/Java build. The UI 
 | `HomeActivity` | Full-screen launcher: aurora background, clock, weather, hero recommendation, deck actions, dock, focus routing. |
 | `AppDrawerActivity` | Translucent bottom-sheet app drawer with a six-column grid. Not exported; opened from the dock. |
 | `SettingsActivity` | Seven-pane settings surface: General, Appearance, Network, Display & Sound, Apps, Privacy, About. |
-| `HomeKeyWatcherService` | Foreground service that detects the stock launcher at foreground importance and brings `HomeActivity` back to the front. Also keeps a `CLOSE_SYSTEM_DIALOGS` fast path. |
+| `HomeKeyWatcherService` | Foreground service that detects the stock launcher through `UsageStatsManager` (plus the process list where allowed) and brings `HomeActivity` back to the front. Also keeps a `CLOSE_SYSTEM_DIALOGS` fast path. |
 | `HomeKeyReceiver` | Enable/disable and boot helper for the Home watcher. |
 | `HomeAccessibilityService` | Legacy optional accessibility route, kept for Fire OS builds that allow third-party providers. Fire OS 5.1.1 blocks it. |
 
@@ -66,16 +66,25 @@ Default look: **Midnight / Amber / 62% glass**.
 
 Fire OS 5.1.1 routes the physical Home key through `FireTVKeyPolicyManager`, which explicitly starts `com.amazon.tv.launcher/.ui.HomeActivity_vNext`. Normal HOME preferred-activity changes therefore do not affect the remote’s Home button.
 
-Fire OS also sends a protected `android.intent.action.CLOSE_SYSTEM_DIALOGS` broadcast with `reason=home`. It is registered-receivers-only and requires `DISABLE_KEYGUARD`, but Fire OS 5.1.1 does not define that permission for third-party apps. The system denies the broadcast to OBAA (and to other sideloaded apps). `HomeKeyWatcherService` therefore uses a foreground-process watcher:
+Fire OS also sends a protected `android.intent.action.CLOSE_SYSTEM_DIALOGS` broadcast with `reason=home`. It is registered-receivers-only and requires `DISABLE_KEYGUARD`, but Fire OS 5.1.1 does not define that permission for third-party apps. The system denies the broadcast to OBAA (and to other sideloaded apps). In addition, AOSP 5.1.1 filters `ActivityManager.getRunningAppProcesses()` to the caller's UID unless the caller holds `REAL_GET_TASKS` or the privileged `GET_TASKS`, so a sideloaded app cannot see the stock launcher in that list. `HomeKeyWatcherService` therefore uses `UsageStatsManager`:
 
 - runs as a lightweight foreground service;
-- polls `ActivityManager.getRunningAppProcesses()` every 500 ms while the screen is on;
-- looks for `com.amazon.tv.launcher` at `IMPORTANCE_FOREGROUND`;
+- polls every 500 ms while the screen is on;
+- reads the most recent `UsageStats` entry from the last 6 hours and compares its package to `com.amazon.tv.launcher`;
+- also checks `getRunningAppProcesses()` as a faster path on firmware that does not filter it;
 - starts `HomeActivity` with `NEW_TASK | REORDER_TO_FRONT | SINGLE_TOP`;
 - skips polling whenever `HomeActivity` is resumed;
 - debounces duplicate launches for 1.2 s;
 - keeps a dynamic `CLOSE_SYSTEM_DIALOGS` receiver as a faster path on builds that do define `DISABLE_KEYGUARD`;
 - returns `START_STICKY` and is restarted after boot by `HomeKeyReceiver`.
+
+Usage statistics require the `PACKAGE_USAGE_STATS` manifest permission and a one-time app-op grant:
+
+```bash
+adb shell appops set com.aurora.home GET_USAGE_STATS allow
+```
+
+`HomeKeyWatcherService.hasUsageAccess()` checks the app op with `AppOpsManager`; when it is missing, the service logs the exact command once and the Settings dialog explains it.
 
 Fire OS 5.1.1's `A11yAuthorizer` blocks third-party accessibility providers (`trust=false`), so accessibility is not the Fire TV route. The legacy `HomeAccessibilityService` remains for builds that permit it but is not enabled on 5.1.1.
 
