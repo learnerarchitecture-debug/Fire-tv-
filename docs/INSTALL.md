@@ -1,6 +1,6 @@
 # 🚀 Install OBAA Home
 
-This guide covers a normal Fire TV install, first launch, the optional Fire TV Home-key service, and recovery.
+This guide covers a normal Fire TV install, first launch, the built-in Fire TV Home watcher, and recovery.
 
 ## Requirements
 
@@ -54,26 +54,23 @@ The drawer uses six columns. Main apps are pinned first, followed by other launc
 
 Press **Back** to close the drawer.
 
-## 6. Optional: Fire TV Home key
+## 6. Fire TV Home key
 
-Fire OS 5.1.1 sends the physical Home key directly to the stock launcher. OBAA Home includes an accessibility service that filters the Home key and opens `HomeActivity` instead.
+Fire OS 5.1.1 sends the physical Home key directly to the stock launcher, then emits a protected `CLOSE_SYSTEM_DIALOGS` broadcast with `reason=home`. The firmware does not define `DISABLE_KEYGUARD`, so third-party apps cannot receive that broadcast. OBAA Home therefore runs a small foreground watcher that checks whether the stock launcher is the foreground process and brings OBAA Home back to the front. No accessibility service or root is required.
 
-### Grant the setup permission
+The stock launcher may remain visible for roughly 0.5–1.5 s before OBAA Home appears. It is never disabled.
 
-```bash
-adb shell pm grant com.aurora.home android.permission.WRITE_SECURE_SETTINGS
-```
+### Enable
 
-### Enable the service
-
-> **Important:** installing the APK does not change the Fire TV Home button by itself. Fire OS 5.1.1 ignores normal default-launcher changes, so the accessibility service must be enabled once.
+Opening OBAA Home starts the watcher automatically. To enable it explicitly:
 
 ```bash
-adb shell pm grant com.aurora.home android.permission.WRITE_SECURE_SETTINGS
 adb shell am broadcast \
   -a com.aurora.home.ENABLE_HOME_KEY \
   -n com.aurora.home/.HomeKeyReceiver
 ```
+
+No `WRITE_SECURE_SETTINGS` grant is needed for the watcher.
 
 Or use the included helper from the repository root:
 
@@ -85,33 +82,36 @@ tools\setup-firetv-home.bat
 .\tools\setup-firetv-home.ps1
 ```
 
-You can also use **Settings → Apps → Default home → Enable now** in OBAA Home, or enable **OBAA Home key** directly in **Fire TV Settings → Accessibility**.
+You can also use **Settings → Apps → Default home → Enable now** in OBAA Home.
 
 ### Verify
 
 ```bash
-adb shell settings get secure enabled_accessibility_services
-adb shell dumpsys accessibility
+# Watcher service is running
+adb shell dumpsys activity services com.aurora.home | grep HomeKeyWatcherService
+
+# Live watcher log
+adb logcat -s HomeKeyWatcherService HomeKeyReceiver
+
+# Resumed activity after pressing Home
 adb shell dumpsys activity activities | grep mResumedActivity
 ```
 
-Expected component:
+Expected resumed activity:
 
 ```text
-com.aurora.home/com.aurora.home.HomeAccessibilityService
+com.aurora.home/.HomeActivity
 ```
 
 ### Test
 
 1. Open YouTube from the dock or drawer.
 2. Press the physical **Home** button.
-3. OBAA Home should return to the foreground.
-
-Holding **Menu** while pressing **Home** is intentionally left to Fire OS so the original long-press Home menu remains reachable.
+3. OBAA Home should return to the foreground after a short stock-launcher flash. Look for `stock launcher foreground` and `launching OBAA Home (poll)` in logcat.
 
 ## 7. Restore the stock launcher
 
-The stock launcher is never disabled. Disable the OBAA Home key service:
+The stock launcher is never disabled. Disable the Home watcher:
 
 ```bash
 adb shell am broadcast \
@@ -119,13 +119,7 @@ adb shell am broadcast \
   -n com.aurora.home/.HomeKeyReceiver
 ```
 
-Or reset accessibility:
-
-```bash
-adb shell settings put secure accessibility_enabled 0
-```
-
-If the service was enabled manually in Fire TV accessibility settings, turn it off there as well.
+Or use **OBAA Home → Settings → Apps → Default home → Disable**. The next Home press goes to Fire OS normally.
 
 ## Troubleshooting
 
@@ -133,10 +127,10 @@ If the service was enabled manually in Fire TV accessibility settings, turn it o
 |---|---|
 | `device offline` | Wake the Fire TV, reconnect with the current IP, and run `adb devices` again. |
 | App drawer does not open | Open it from the **Apps** dock item; the drawer activity is not exported and cannot be started with `am start`. |
-| Home button still opens the stock launcher | Reinstall the latest APK (it must contain `HomeKeyReceiver`), run the setup script, then enable **OBAA Home key** in **Fire TV Settings → Accessibility**. Check `settings get secure enabled_accessibility_services`; if it is blank, Fire OS rejected the service. See [FIRETV_DEFAULT_HOME.md](FIRETV_DEFAULT_HOME.md). |
+| Home button still opens the stock launcher | Reinstall the latest APK, open OBAA Home once, and confirm `HomeKeyWatcherService` is running. Check `adb logcat -s HomeKeyWatcherService` for `stock launcher foreground` and `launching OBAA Home (poll)`. See [FIRETV_DEFAULT_HOME.md](FIRETV_DEFAULT_HOME.md). |
 | Netflix tile is a fallback | Netflix is not installed on the device; install it from the Appstore and reopen the drawer. |
 | Prime Video exits immediately | The Prime app exits on the test device even from Fire OS itself; this is not an OBAA Home crash. |
-| YouTube returns to the stock launcher on Back | YouTube opens in its own task. The Home-key service is the intended way back to OBAA Home. |
+| YouTube returns to the stock launcher on Back | YouTube opens in its own task. Press Home to return to OBAA Home. |
 | Weather does not load | Check the network connection and the city in **Settings → General → Weather city**. |
 
 ## Uninstall
@@ -145,7 +139,7 @@ If the service was enabled manually in Fire TV accessibility settings, turn it o
 adb uninstall com.aurora.home
 ```
 
-Before uninstalling, disable the Home-key service so accessibility settings do not retain a missing component:
+Before uninstalling, disable the Home watcher:
 
 ```bash
 adb shell am broadcast \

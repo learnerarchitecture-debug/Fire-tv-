@@ -21,24 +21,22 @@ echo [1/4] Installing OBAA Home...
 if errorlevel 1 goto :failed
 
 echo.
-echo [2/4] Granting one-time setup permission...
-%ADB% shell pm grant com.aurora.home android.permission.WRITE_SECURE_SETTINGS
+echo [2/4] Starting OBAA Home...
+%ADB% shell am start -n com.aurora.home/.HomeActivity
 
 echo.
-echo [3/4] Enabling the OBAA Home key service...
+echo [3/4] Enabling the OBAA Home watcher...
 %ADB% shell am broadcast -a com.aurora.home.ENABLE_HOME_KEY -n com.aurora.home/.HomeKeyReceiver
 
 echo.
-echo [4/4] Checking state...
+echo [4/4] Checking the Home watcher...
 timeout /t 2 /nobreak >nul
-echo enabled_accessibility_services:
-%ADB% shell settings get secure enabled_accessibility_services
-echo accessibility_enabled:
-%ADB% shell settings get secure accessibility_enabled
+%ADB% shell dumpsys activity services com.aurora.home | findstr /i "HomeKeyWatcherService"
 echo.
-echo If both values look right, open YouTube and press Home.
-echo If the service is blank or still opens the stock launcher, use
-echo Fire TV Settings ^> Accessibility ^> OBAA Home key, or see docs\FIRETV_DEFAULT_HOME.md.
+echo The stock launcher may flash briefly, then OBAA Home should appear.
+echo Open YouTube and press Home to test. If the stock launcher remains,
+echo run: adb logcat -s HomeKeyWatcherService HomeKeyReceiver
+echo See docs\FIRETV_DEFAULT_HOME.md for details.
 pause
 exit /b 0
 

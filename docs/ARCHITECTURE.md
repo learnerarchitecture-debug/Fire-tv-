@@ -9,8 +9,9 @@ OBAA Home is a single-module Android app with a raw resource/Java build. The UI 
 | `HomeActivity` | Full-screen launcher: aurora background, clock, weather, hero recommendation, deck actions, dock, focus routing. |
 | `AppDrawerActivity` | Translucent bottom-sheet app drawer with a six-column grid. Not exported; opened from the dock. |
 | `SettingsActivity` | Seven-pane settings surface: General, Appearance, Network, Display & Sound, Apps, Privacy, About. |
-| `HomeAccessibilityService` | Filters `KEYCODE_HOME` and brings `HomeActivity` to the front. Leaves Menu+Home to Fire OS. |
-| `HomeKeyReceiver` | Setup helper for writing the accessibility component into secure settings. |
+| `HomeKeyWatcherService` | Foreground service that detects the stock launcher at foreground importance and brings `HomeActivity` back to the front. Also keeps a `CLOSE_SYSTEM_DIALOGS` fast path. |
+| `HomeKeyReceiver` | Enable/disable and boot helper for the Home watcher. |
+| `HomeAccessibilityService` | Legacy optional accessibility route, kept for Fire OS builds that allow third-party providers. Fire OS 5.1.1 blocks it. |
 
 ## Home screen
 
@@ -42,7 +43,7 @@ The drawer is launched with a bottom-sheet animation from the dock. **Back** clo
 
 ## Launching apps
 
-`AppDrawerActivity` prefers a normal launch intent and falls back to a leanback intent. It avoids `FLAG_ACTIVITY_NEW_TASK` so returning to OBAA is preferred where the target app allows it. Some Fire TV apps, including YouTube, still open in their own task; the Home-key service is the intended way back.
+`AppDrawerActivity` prefers a normal launch intent and falls back to a leanback intent. It avoids `FLAG_ACTIVITY_NEW_TASK` so returning to OBAA is preferred where the target app allows it. Some Fire TV apps, including YouTube, still open in their own task; the Home-key watcher is the intended way back.
 
 ## Themes and preferences
 
@@ -65,14 +66,20 @@ Default look: **Midnight / Amber / 62% glass**.
 
 Fire OS 5.1.1 routes the physical Home key through `FireTVKeyPolicyManager`, which explicitly starts `com.amazon.tv.launcher/.ui.HomeActivity_vNext`. Normal HOME preferred-activity changes therefore do not affect the remote’s Home button.
 
-`HomeAccessibilityService` uses an accessibility-service key filter:
+Fire OS also sends a protected `android.intent.action.CLOSE_SYSTEM_DIALOGS` broadcast with `reason=home`. It is registered-receivers-only and requires `DISABLE_KEYGUARD`, but Fire OS 5.1.1 does not define that permission for third-party apps. The system denies the broadcast to OBAA (and to other sideloaded apps). `HomeKeyWatcherService` therefore uses a foreground-process watcher:
 
-- `android:canRequestFilterKeyEvents="true"`
-- `android:accessibilityFlags="flagRequestFilterKeyEvents"`
-- `onKeyEvent()` consumes `KEYCODE_HOME` and starts `HomeActivity`.
-- Menu state is tracked so **Menu + Home** is passed through to Fire OS.
+- runs as a lightweight foreground service;
+- polls `ActivityManager.getRunningAppProcesses()` every 500 ms while the screen is on;
+- looks for `com.amazon.tv.launcher` at `IMPORTANCE_FOREGROUND`;
+- starts `HomeActivity` with `NEW_TASK | REORDER_TO_FRONT | SINGLE_TOP`;
+- skips polling whenever `HomeActivity` is resumed;
+- debounces duplicate launches for 1.2 s;
+- keeps a dynamic `CLOSE_SYSTEM_DIALOGS` receiver as a faster path on builds that do define `DISABLE_KEYGUARD`;
+- returns `START_STICKY` and is restarted after boot by `HomeKeyReceiver`.
 
-The service is enabled by writing `enabled_accessibility_services` and `accessibility_enabled` in `Settings.Secure`. The setup helper requires `WRITE_SECURE_SETTINGS`; grant it once with ADB.
+Fire OS 5.1.1's `A11yAuthorizer` blocks third-party accessibility providers (`trust=false`), so accessibility is not the Fire TV route. The legacy `HomeAccessibilityService` remains for builds that permit it but is not enabled on 5.1.1.
+
+The stock launcher is never disabled. It may remain visible for roughly 0.5–1.5 s before OBAA Home appears.
 
 See [FIRETV_DEFAULT_HOME.md](FIRETV_DEFAULT_HOME.md) for the platform investigation and recovery path.
 

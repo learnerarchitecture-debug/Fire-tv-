@@ -7,7 +7,8 @@
     <uses-sdk android:minSdkVersion="22" android:targetSdkVersion="22"/>
 
     <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"/>
+    <uses-permission android:name="android.permission.DISABLE_KEYGUARD"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
 
@@ -55,6 +56,11 @@
             android:configChanges="orientation|screenSize|keyboardHidden"/>
 
         <service
+            android:name=".HomeKeyWatcherService"
+            android:exported="false"
+            android:stopWithTask="false"/>
+
+        <service
             android:name=".HomeAccessibilityService"
             android:label="@string/accessibility_service_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
@@ -73,6 +79,7 @@
             <intent-filter>
                 <action android:name="com.aurora.home.ENABLE_HOME_KEY"/>
                 <action android:name="com.aurora.home.DISABLE_HOME_KEY"/>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
         </receiver>
     </application>

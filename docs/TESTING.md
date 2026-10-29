@@ -47,45 +47,25 @@ Back
 
 Expected result: `HomeActivity` is resumed and the **Apps** dock item is focused.
 
-## Home-key service checklist
+## Home-key watcher checklist
 
-The accessibility service is included in the build. Verify it on your Fire OS version:
+Fire OS 5.1.1 blocks third-party accessibility providers and does not define `DISABLE_KEYGUARD`, so the Home route uses a foreground-process watcher instead of the broadcast. Verify:
 
-1. Grant the setup permission:
+1. Open OBAA Home once. This starts the watcher automatically.
 
-   ```bash
-   adb shell pm grant com.aurora.home android.permission.WRITE_SECURE_SETTINGS
-   ```
-
-2. Enable the service:
+2. Confirm the service is running:
 
    ```bash
-   adb shell am broadcast \
-     -a com.aurora.home.ENABLE_HOME_KEY \
-     -n com.aurora.home/.HomeKeyReceiver
+   adb shell dumpsys activity services com.aurora.home | grep HomeKeyWatcherService
    ```
 
-3. Confirm the component is present:
+3. Start a live log:
 
    ```bash
-   adb shell settings get secure enabled_accessibility_services
+   adb logcat -s HomeKeyWatcherService HomeKeyReceiver
    ```
 
-   Expected:
-
-   ```text
-   com.aurora.home/com.aurora.home.HomeAccessibilityService
-   ```
-
-4. Confirm accessibility is enabled:
-
-   ```bash
-   adb shell settings get secure accessibility_enabled
-   ```
-
-   Expected: `1`
-
-5. Open YouTube, press the physical **Home** button, and inspect the resumed activity:
+4. Open YouTube, press the physical **Home** button, and inspect the resumed activity:
 
    ```bash
    adb shell dumpsys activity activities | grep mResumedActivity
@@ -97,9 +77,17 @@ The accessibility service is included in the build. Verify it on your Fire OS ve
    mResumedActivity: ActivityRecord{... com.aurora.home/.HomeActivity ...}
    ```
 
-6. Press **Menu + Home**. The stock Fire TV long-press Home behaviour should remain available because the service passes Home through while Menu is held.
+   Expected log:
 
-7. Disable the service and confirm the stock launcher returns:
+   ```text
+   I/HomeKeyWatcherService: poll: ... launcher importance=100
+   I/HomeKeyWatcherService: stock launcher foreground, importance=100
+   I/HomeKeyWatcherService: launching OBAA Home (poll)
+   ```
+
+5. The stock launcher may remain visible for roughly 0.5–1.5 s before OBAA Home appears. That is expected on Fire OS 5.1.1.
+
+6. Disable the watcher and confirm the stock launcher returns:
 
    ```bash
    adb shell am broadcast \
@@ -107,7 +95,15 @@ The accessibility service is included in the build. Verify it on your Fire OS ve
      -n com.aurora.home/.HomeKeyReceiver
    ```
 
-> Some Fire OS builds reject sideloaded accessibility services. If the setting does not persist, use FTVLaunchX or document the limitation for your firmware. See [FIRETV_DEFAULT_HOME.md](FIRETV_DEFAULT_HOME.md).
+7. Re-enable it before leaving the test device in the desired state:
+
+   ```bash
+   adb shell am broadcast \
+     -a com.aurora.home.ENABLE_HOME_KEY \
+     -n com.aurora.home/.HomeKeyReceiver
+   ```
+
+> Fire OS 5.1.1's `A11yAuthorizer` rejects sideloaded accessibility providers (`trust=false`). Do not expect FTVLaunchX or `HomeAccessibilityService` to bind on this firmware. See [FIRETV_DEFAULT_HOME.md](FIRETV_DEFAULT_HOME.md).
 
 ## Useful ADB checks
 
@@ -118,8 +114,8 @@ adb shell dumpsys activity activities | grep mResumedActivity
 # Package and version
 adb shell dumpsys package com.aurora.home | grep -E 'versionName|versionCode'
 
-# Accessibility state
-adb shell dumpsys accessibility
+# Home watcher service
+adb shell dumpsys activity services com.aurora.home | grep HomeKeyWatcherService
 
 # Recent app logs
 adb logcat -d | grep -E 'aurora|AppDrawer|HomeKey|AndroidRuntime'
@@ -129,11 +125,13 @@ adb logcat -d | grep -E 'aurora|AppDrawer|HomeKey|AndroidRuntime'
 
 | Issue | Status |
 |---|---|
-| Physical Home key is hardcoded to the stock launcher on Fire OS 5.1.1 | Workaround included: accessibility service. Availability depends on firmware. |
+| Physical Home key is hardcoded to the stock launcher on Fire OS 5.1.1 | Workaround included: foreground-process watcher. The stock launcher may remain visible for ~0.5–1.5 s. |
+| `DISABLE_KEYGUARD` broadcast is denied on Fire OS 5.1.1 | The permission is undefined on this firmware; the watcher uses process polling instead. |
 | Netflix is not installed on the test device | Dock fallback tile remains; drawer entry appears after installation. |
 | Prime Video exits immediately on the test device | Reproduced from Fire OS itself; not an OBAA Home crash. |
-| YouTube opens in its own task | Back returns to the stock launcher; Home-key service is the intended return path. |
-| Fire OS 6+ accessibility behaviour | Not verified in this repository. |
+| YouTube opens in its own task | Back returns to the stock launcher; press Home to return to OBAA Home. |
+| Fire OS 5.1.1 accessibility providers | Blocked by `A11yAuthorizer` (`trust=false`); the watcher does not use accessibility. |
+| Fire OS 6+ Home behavior | Not verified in this repository. |
 | Android TV | Deferred to a separate **OBAA Smart TV** build. |
 
 ## Regression checklist for future builds
@@ -146,4 +144,4 @@ adb logcat -d | grep -E 'aurora|AppDrawer|HomeKey|AndroidRuntime'
 - [ ] Prime Video label is shown for `com.amazon.avod`.
 - [ ] Settings opens and closes with Back.
 - [ ] Theme and accent changes survive a restart.
-- [ ] Home-key service can be enabled and disabled without disabling the stock launcher.
+- [ ] Home-key watcher can be enabled and disabled without disabling the stock launcher.

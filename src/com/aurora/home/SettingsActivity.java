@@ -753,7 +753,7 @@ public class SettingsActivity extends Activity {
                     }
                 });
         addChevronRow(card, IconView.INFO, "Default home",
-                "How to make OBAA Home the launcher", new View.OnClickListener() {
+                "Make OBAA Home the Home screen", new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         showDefaultHomeDialog();
@@ -878,7 +878,7 @@ public class SettingsActivity extends Activity {
                     }
                 });
         addChevronRow(card, IconView.APPS, "Set as default home",
-                "Launcher Manager or ADB", new View.OnClickListener() {
+                "Home key watcher", new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         showDefaultHomeDialog();
@@ -1180,8 +1180,8 @@ public class SettingsActivity extends Activity {
                                         ? HomeKeyReceiver.disable(SettingsActivity.this)
                                         : HomeKeyReceiver.enable(SettingsActivity.this);
                                 toast(ok
-                                        ? (enabled ? "Home key service disabled" : "Home key service enabled")
-                                        : "Grant WRITE_SECURE_SETTINGS with ADB first");
+                                        ? (enabled ? "Home key watcher disabled" : "Home key watcher enabled")
+                                        : "Could not start the Home watcher");
                                 showPane(mPane, true);
                             }
                         })

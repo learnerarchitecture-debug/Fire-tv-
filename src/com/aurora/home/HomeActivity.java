@@ -68,12 +68,19 @@ public class HomeActivity extends Activity {
     private Set<String> mSaved = new HashSet<String>();
     private int mAccent = 0xFFFFB45E;
     private boolean mFirstResume = true;
+    private static volatile boolean sResumed;
+
+    /** Used by the Home watcher to avoid a duplicate launch when OBAA is already visible. */
+    public static boolean isResumed() {
+        return sResumed;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Ui.immersive(this);
         setContentView(R.layout.activity_home);
+        HomeKeyWatcherService.ensureStarted(this);
 
         mRoot = findViewById(R.id.root);
         mBg = (AuroraBackgroundView) findViewById(R.id.bg);
@@ -334,6 +341,7 @@ public class HomeActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        sResumed = true;
         Ui.immersive(this);
         mSaved = Prefs.savedIds(this);
         mDeck.setSavedIds(mSaved);
@@ -359,6 +367,7 @@ public class HomeActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
+        sResumed = false;
         stopClock();
     }
 

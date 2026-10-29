@@ -89,7 +89,7 @@ adb install -r OBAAHome.apk
 | `JDK not found` | Put the JDK under `../jdk-extract` or update `JDK`. |
 | `aapt2` attribute error | The resource uses an attribute newer than API 22. Keep accessibility event types compatible with API 22. |
 | PowerShell reports exit code 1 | `build.sh` writes progress to stderr. Confirm the final line says `BUILD OK`. |
-| APK installs but Home key does not work | The accessibility service must be enabled separately; see [INSTALL.md](INSTALL.md). |
+| APK installs but Home key does not work | The Home watcher must be running; open OBAA Home once, then see [INSTALL.md](INSTALL.md). |
 
 ## Clean build
 
