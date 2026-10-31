@@ -2,54 +2,40 @@ package com.aurora.home;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
-import android.widget.GridView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
- * Bottom-sheet app drawer for the home screen. Shows launchable user apps
- * and the curated main apps (YouTube, Netflix and Prime Video). Fire OS
- * system apps stay hidden so the drawer remains a personal app shelf.
+ * Bottom-sheet app drawer for the home screen. The automatic tray contains
+ * every launchable user app plus YouTube, Netflix and Prime Video. The
+ * "Add apps" button opens a picker that can also add Fire OS system apps;
+ * the chosen packages are stored in Prefs.
  */
 public class AppDrawerActivity extends Activity {
 
-    private static final Set<String> MAIN = new HashSet<String>(Arrays.asList(
-            "com.amazon.firetv.youtube",
-            "com.amazon.youtube",
-            "com.google.android.youtube",
-            "com.google.android.youtube.tv",
-            "com.netflix.mediaclient",
-            "com.netflix.ninja",
-            "com.amazon.avod",
-            "com.amazon.amazonvideo.livingroom"
-    ));
+    private static final int REQ_PICK_APPS = 41;
 
-    private GridView mGrid;
+    private TvGridView mGrid;
     private TextView mSubtitle;
     private View mSheet;
     private View mScrim;
     private View mEmpty;
+    private View mAddApps;
     private AppGridAdapter mAdapter;
     private IconLoader mLoader;
     private final Handler mUi = new Handler(Looper.getMainLooper());
     private boolean mClosing;
+    private boolean mFirstResume = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,9 +45,10 @@ public class AppDrawerActivity extends Activity {
 
         mSheet = findViewById(R.id.drawer_sheet);
         mScrim = findViewById(R.id.drawer_scrim);
-        mGrid = (GridView) findViewById(R.id.drawer_grid);
+        mGrid = (TvGridView) findViewById(R.id.drawer_grid);
         mEmpty = findViewById(R.id.drawer_empty);
         mSubtitle = (TextView) findViewById(R.id.drawer_subtitle);
+        mAddApps = findViewById(R.id.drawer_add);
 
         IconView closeIcon = (IconView) findViewById(R.id.drawer_close_icon);
         closeIcon.setMode(IconView.CLOSE);
@@ -72,10 +59,45 @@ public class AppDrawerActivity extends Activity {
                 closeDrawer();
             }
         });
+
+        IconView addIcon = (IconView) findViewById(R.id.drawer_add_icon);
+        addIcon.setMode(IconView.PLUS);
+        addIcon.setColor(Prefs.accent(this), 0);
+        mAddApps.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openPicker();
+            }
+        });
+        mAddApps.setOnKeyListener(new View.OnKeyListener() {
+            @Override
+            public boolean onKey(View v, int keyCode, KeyEvent event) {
+                if (event.getAction() == KeyEvent.ACTION_DOWN
+                        && keyCode == KeyEvent.KEYCODE_DPAD_UP
+                        && mAdapter.getCount() > 0) {
+                    mGrid.focusLast();
+                    return true;
+                }
+                return false;
+            }
+        });
+
         mScrim.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 closeDrawer();
+            }
+        });
+
+        mGrid.setEdgeListener(new TvGridView.EdgeListener() {
+            @Override
+            public void onDownEdge() {
+                mAddApps.requestFocus();
+            }
+
+            @Override
+            public void onUpEdge() {
+                findViewById(R.id.drawer_close).requestFocus();
             }
         });
 
@@ -146,12 +168,10 @@ public class AppDrawerActivity extends Activity {
     }
 
     private void loadApps() {
-        final PackageManager pm = getPackageManager();
-        final String self = getPackageName();
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final List<AppGridAdapter.AppEntry> apps = queryApps(pm, self);
+                final List<AppGridAdapter.AppEntry> apps = AppCatalog.visible(AppDrawerActivity.this);
                 mUi.post(new Runnable() {
                     @Override
                     public void run() {
@@ -165,11 +185,13 @@ public class AppDrawerActivity extends Activity {
 
     private void bindApps(List<AppGridAdapter.AppEntry> apps) {
         mAdapter.setApps(apps);
-        mSubtitle.setText(getString(R.string.apps_lead) + " \u00B7 " + apps.size());
+        String lead = AppCatalog.isCustom(this)
+                ? "YOUR TRAY" : getString(R.string.apps_lead);
+        mSubtitle.setText(lead + " \u00B7 " + apps.size());
         if (apps.isEmpty()) {
             mGrid.setVisibility(View.GONE);
             mEmpty.setVisibility(View.VISIBLE);
-            findViewById(R.id.drawer_close).requestFocus();
+            mAddApps.requestFocus();
             return;
         }
         mGrid.setVisibility(View.VISIBLE);
@@ -178,100 +200,38 @@ public class AppDrawerActivity extends Activity {
             @Override
             public void run() {
                 if (isFinishing() || mAdapter.getCount() == 0) return;
-                if (mGrid.getChildCount() > 0) {
-                    mGrid.getChildAt(0).requestFocus();
-                } else {
-                    mGrid.requestFocus();
-                }
+                mGrid.focusFirst();
             }
         }, 60);
     }
 
-    private List<AppGridAdapter.AppEntry> queryApps(PackageManager pm, String self) {
-        List<AppGridAdapter.AppEntry> out = new ArrayList<AppGridAdapter.AppEntry>();
-        List<ApplicationInfo> all;
-        try {
-            all = pm.getInstalledApplications(0);
-        } catch (Throwable t) {
-            return out;
-        }
-        Set<String> seen = new HashSet<String>();
-        for (ApplicationInfo ai : all) {
-            if (ai == null || ai.packageName == null) continue;
-            String pkg = ai.packageName;
-            if (pkg.equals(self) || seen.contains(pkg) || !ai.enabled) continue;
-
-            boolean system = (ai.flags & (ApplicationInfo.FLAG_SYSTEM
-                    | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
-            if (system && !MAIN.contains(pkg)) continue;
-
-            Intent launch = launchIntent(pm, pkg);
-            if (launch == null) continue;
-
-            CharSequence label = null;
-            try {
-                label = pm.getApplicationLabel(ai);
-            } catch (Throwable ignored) {
-            }
-            if (label == null || label.length() == 0) label = pkg;
-
-            // Fire OS labels the Prime Video package "FireTV Player". Keep the
-            // drawer consistent with the curated dock and the rest of OBAA.
-            int rank = priority(pkg);
-            if (rank == 0) {
-                label = getString(R.string.youtube);
-            } else if (rank == 1) {
-                label = getString(R.string.netflix);
-            } else if (rank == 2) {
-                label = getString(R.string.prime_video);
-            }
-
-            AppGridAdapter.AppEntry entry = new AppGridAdapter.AppEntry();
-            entry.pkg = pkg;
-            entry.label = label;
-            entry.intent = launch;
-            out.add(entry);
-            seen.add(pkg);
-        }
-        Collections.sort(out, new Comparator<AppGridAdapter.AppEntry>() {
-            @Override
-            public int compare(AppGridAdapter.AppEntry a, AppGridAdapter.AppEntry b) {
-                int pa = priority(a.pkg);
-                int pb = priority(b.pkg);
-                if (pa != pb) return pa - pb;
-                return String.valueOf(a.label).compareToIgnoreCase(String.valueOf(b.label));
-            }
-        });
-        return out;
+    private void openPicker() {
+        startActivityForResult(new Intent(this, AppPickerActivity.class), REQ_PICK_APPS);
+        overridePendingTransition(0, 0);
     }
 
-    private static Intent launchIntent(PackageManager pm, String pkg) {
-        Intent intent = null;
-        // Match the dock and Settings behaviour: prefer the regular launcher
-        // activity, then fall back to the leanback entry point.
-        try {
-            intent = pm.getLaunchIntentForPackage(pkg);
-        } catch (Throwable ignored) {
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mFirstResume) {
+            mFirstResume = false;
+            return;
         }
-        if (intent == null) {
-            try {
-                intent = pm.getLeanbackLaunchIntentForPackage(pkg);
-            } catch (Throwable ignored) {
-            }
-        }
-        return intent;
+        loadApps();
     }
 
-    private static int priority(String pkg) {
-        if ("com.amazon.firetv.youtube".equals(pkg)
-                || "com.amazon.youtube".equals(pkg)
-                || "com.google.android.youtube".equals(pkg)
-                || "com.google.android.youtube.tv".equals(pkg)) return 0;
-        if ("com.netflix.mediaclient".equals(pkg)
-                || "com.netflix.ninja".equals(pkg)) return 1;
-        if ("com.amazon.avod".equals(pkg)
-                || "com.amazon.amazonvideo.livingroom".equals(pkg)) return 2;
-        return 10;
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_PICK_APPS) {
+            loadApps();
+            mAddApps.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mAddApps.requestFocus();
+                }
+            }, 120);
+        }
     }
 
     private void openApp(AppGridAdapter.AppEntry entry) {

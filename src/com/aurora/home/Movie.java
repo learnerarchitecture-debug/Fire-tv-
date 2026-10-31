@@ -10,14 +10,26 @@ public final class Movie {
     public final String rating;
     public final String description;
     public final String tag;
+    /** Optional thumbnail bitmap (e.g., from OTT provider artwork). */
+    public android.graphics.Bitmap thumbnail;
     public final int match;
     public final int c1;
     public final int c2;
     public final int c3;
+    /** Installed OTT provider that supplies this recommendation. */
+    public final String providerName;
+    public final String providerPkg;
 
     public Movie(String id, String title, String year, String genre, String duration,
                  String rating, int match, String description, String tag,
                  int c1, int c2, int c3) {
+        this(id, title, year, genre, duration, rating, match, description, tag,
+                c1, c2, c3, "", "");
+    }
+
+    public Movie(String id, String title, String year, String genre, String duration,
+                 String rating, int match, String description, String tag,
+                 int c1, int c2, int c3, String providerName, String providerPkg) {
         this.id = id;
         this.title = title;
         this.year = year;
@@ -30,6 +42,8 @@ public final class Movie {
         this.c1 = c1;
         this.c2 = c2;
         this.c3 = c3;
+        this.providerName = providerName == null ? "" : providerName;
+        this.providerPkg = providerPkg == null ? "" : providerPkg;
     }
 
     public String meta() {

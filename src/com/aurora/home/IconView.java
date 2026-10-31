@@ -36,6 +36,8 @@ public class IconView extends View {
     public static final int DISPLAY = 18;
     public static final int LOCK = 19;
     public static final int CALENDAR = 20;
+    public static final int PLUS = 21;
+    public static final int CHECK = 22;
 
     private int mMode = GEAR;
     private int mColor = 0xFFEAF2FF;
@@ -107,6 +109,8 @@ public class IconView extends View {
             case DISPLAY: drawDisplay(c, cx, cy, s); break;
             case LOCK: drawLock(c, cx, cy, s); break;
             case CALENDAR: drawCalendar(c, cx, cy, s); break;
+            case PLUS: drawPlus(c, cx, cy, s); break;
+            case CHECK: drawCheck(c, cx, cy, s); break;
             default: break;
         }
     }
@@ -292,6 +296,18 @@ public class IconView extends View {
         c.drawArc(mRect, 205, 130, false, mStroke);
         mRect.set(cx - s * 0.18f, cy - s * 0.04f, cx + s * 0.18f, cy + s * 0.48f);
         c.drawArc(mRect, 205, 130, false, mStroke);
+    }
+
+    private void drawPlus(Canvas c, float cx, float cy, float s) {
+        mStroke.setStrokeWidth(s * 0.12f);
+        c.drawLine(cx - s * 0.28f, cy, cx + s * 0.28f, cy, mStroke);
+        c.drawLine(cx, cy - s * 0.28f, cx, cy + s * 0.28f, mStroke);
+    }
+
+    private void drawCheck(Canvas c, float cx, float cy, float s) {
+        mStroke.setStrokeWidth(s * 0.13f);
+        c.drawLine(cx - s * 0.27f, cy + s * 0.02f, cx - s * 0.07f, cy + s * 0.22f, mStroke);
+        c.drawLine(cx - s * 0.07f, cy + s * 0.22f, cx + s * 0.30f, cy - s * 0.24f, mStroke);
     }
 
     private void drawCloud(Canvas c, float cx, float cy, float s) {

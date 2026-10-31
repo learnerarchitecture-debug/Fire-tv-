@@ -10,8 +10,13 @@
     <uses-permission android:name="android.permission.DISABLE_KEYGUARD"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"/>
+    <!-- Fire OS signature permission; harmless if the installer does not grant it. -->
+    <uses-permission android:name="amazon.intent.permission.HOME_PRESSED"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="22"/>
 
     <uses-feature android:name="android.software.leanback" android:required="false"/>
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
@@ -56,6 +61,12 @@
             android:excludeFromRecents="true"
             android:configChanges="orientation|screenSize|keyboardHidden"/>
 
+        <activity android:name=".AppPickerActivity"
+            android:label="@string/picker_title"
+            android:screenOrientation="landscape"
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|keyboardHidden"/>
+
         <service
             android:name=".HomeKeyWatcherService"
             android:exported="false"
@@ -77,10 +88,49 @@
         <receiver
             android:name=".HomeKeyReceiver"
             android:exported="true">
-            <intent-filter>
+            <!-- Fire OS delays BOOT_COMPLETED until long after the launcher is
+                 visible.  These earlier boot-time broadcasts start the watcher
+                 sooner; BOOT_COMPLETED remains the reliable fallback. -->
+            <intent-filter android:priority="8001">
                 <action android:name="com.aurora.home.ENABLE_HOME_KEY"/>
                 <action android:name="com.aurora.home.DISABLE_HOME_KEY"/>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.PRE_BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.USER_STARTED"/>
+                <action android:name="android.intent.action.USER_INITIALIZE"/>
+                <action android:name="android.intent.action.USER_PRESENT"/>
+                <action android:name="android.intent.action.TIME_SET"/>
+                <action android:name="android.intent.action.TIMEZONE_CHANGED"/>
+                <action android:name="android.intent.action.ACTION_POWER_CONNECTED"/>
+                <action android:name="android.intent.action.SCREEN_ON"/>
+                <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
+                <action android:name="android.intent.action.MEDIA_SCANNER_STARTED"/>
+                <action android:name="android.intent.action.MEDIA_SCANNER_FINISHED"/>
+                <action android:name="com.amazon.shouldlaunchhome"/>
+                <action android:name="com.amazon.tv.networkmonitor.INTERNET_UP"/>
+                <action android:name="com.amazon.tv.networkmonitor.POST_BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.DEVICE_STORAGE_OK"/>
+                <action android:name="android.intent.action.DEVICE_STORAGE_LOW"/>
+                <action android:name="android.intent.action.USER_SWITCHED"/>
+                <action android:name="android.intent.action.LOCALE_CHANGED"/>
+                <action android:name="android.intent.action.CONFIGURATION_CHANGED"/>
+                <action android:name="android.accounts.LOGIN_ACCOUNTS_CHANGED"/>
+                <action android:name="android.intent.action.EXTERNAL_APPLICATIONS_AVAILABLE"/>
+                <action android:name="com.amazon.dcp.sso.action.account.added"/>
+                <action android:name="com.amazon.dcp.sso.action.AmazonAccountPropertyService.property.changed"/>
+                <action android:name="amazon.intent.action.USER_ACTIVE"/>
+                <action android:name="amazon.intent.action.LAUNCHING_HOME_ON_SLEEP"/>
+                <action android:name="com.amazon.tv.networkmonitor.CONNECTIVITY_CHECK"/>
+                <action android:name="amazon.intent.action.HOME_PRESSED"/>
+                <action android:name="amazon.intent.action.HOME_DOUBLE_PRESSED"/>
+            </intent-filter>
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.MEDIA_MOUNTED"/>
+                <data android:scheme="file"/>
             </intent-filter>
         </receiver>
     </application>

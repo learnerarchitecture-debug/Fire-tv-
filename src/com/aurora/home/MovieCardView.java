@@ -70,7 +70,15 @@ public class MovieCardView extends View {
         if (w <= 0 || h <= 0) return;
         float radius = Ui.dp(getContext(), 14);
         mRect.set(0, 0, w, h);
-        MovieArt.drawPoster(c, mRect, mMovie, radius, mPaint);
+        if (mMovie.thumbnail != null && !mMovie.thumbnail.isRecycled()) {
+            mPaint.setShader(null);
+            mPaint.setStyle(Paint.Style.FILL);
+            mPaint.setAntiAlias(true);
+            // Thumbnail replaces procedural art when present
+            c.drawBitmap(mMovie.thumbnail, null, mRect, mPaint);
+        } else {
+            MovieArt.drawPoster(c, mRect, mMovie, radius, mPaint);
+        }
 
         // Hairline border keeps each card crisp against the glass.
         mPaint.setShader(null);
@@ -79,8 +87,27 @@ public class MovieCardView extends View {
         mPaint.setColor(0x26FFFFFF);
         c.drawRoundRect(mRect, radius, radius, mPaint);
 
-        // Copy sits along the bottom edge, like the approved mockup.
         float pad = Ui.dp(getContext(), 11);
+
+        // Provider chip, top-left: the card always names the app that
+        // supplies the recommendation alongside its artwork.
+        if (mMovie.providerName.length() > 0) {
+            mText.setTypeface(Ui.MEDIUM);
+            mText.setTextSize(Ui.sp(getContext(), 6));
+            String provider = Ui.ellipsize(mText, mMovie.providerName, w - pad * 2f);
+            float chipW = mText.measureText(provider) + Ui.dp(getContext(), 12);
+            float chipH = Ui.dp(getContext(), 12);
+            mPaint.setShader(null);
+            mPaint.setStyle(Paint.Style.FILL);
+            mPaint.setColor(Ui.alpha(mAccent, 46));
+            c.drawRoundRect(new RectF(pad, pad, pad + chipW, pad + chipH),
+                    chipH / 2f, chipH / 2f, mPaint);
+            mText.setColor(mAccent);
+            c.drawText(provider, pad + Ui.dp(getContext(), 6),
+                    pad + chipH - Ui.dp(getContext(), 3.2f), mText);
+        }
+
+        // Copy sits along the bottom edge, like the approved mockup.
         float ratingReserve = Ui.dp(getContext(), 50);
         float textW = w - pad * 2f - ratingReserve;
 

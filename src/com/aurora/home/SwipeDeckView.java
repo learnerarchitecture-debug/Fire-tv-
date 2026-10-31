@@ -49,7 +49,7 @@ public class SwipeDeckView extends View {
     private final RectF mTmp = new RectF();
     private final Path mHeart = new Path();
 
-    private List<Movie> mDeck = MovieCatalog.MOVIES;
+    private List<Movie> mDeck = new ArrayList<Movie>(MovieCatalog.MOVIES);
     private final List<HistoryEntry> mHistory = new ArrayList<HistoryEntry>();
     private final Set<String> mSaved = new HashSet<String>();
     private int mIndex = 0;
@@ -100,6 +100,24 @@ public class SwipeDeckView extends View {
         mSaved.clear();
         if (ids != null) mSaved.addAll(ids);
         invalidate();
+    }
+
+    /** Replaces the deck when recommendations rotate or providers change. */
+    public void setMovies(List<Movie> movies) {
+        if (mAnimator != null) {
+            mAnimator.cancel();
+            mAnimator = null;
+        }
+        mDeck = new ArrayList<Movie>();
+        if (movies != null) mDeck.addAll(movies);
+        mHistory.clear();
+        mIndex = 0;
+        mDragX = 0f;
+        mDragY = 0f;
+        mAnimating = false;
+        mDragging = false;
+        invalidate();
+        notifyDeckChanged();
     }
 
     public Movie getCurrentMovie() {
@@ -194,7 +212,14 @@ public class SwipeDeckView extends View {
             c.rotate(rotation, r.centerX(), r.centerY());
         }
         float radius = Ui.dp(getContext(), 15);
-        MovieArt.drawPoster(c, r, m, radius, mPaint);
+        if (m.thumbnail != null && !m.thumbnail.isRecycled()) {
+            mPaint.setShader(null);
+            mPaint.setStyle(Paint.Style.FILL);
+            mPaint.setAntiAlias(true);
+            c.drawBitmap(m.thumbnail, null, r, mPaint);
+        } else {
+            MovieArt.drawPoster(c, r, m, radius, mPaint);
+        }
 
         // A permanent hairline keeps the card defined even when unfocused.
         mPaint.setShader(null);
@@ -260,6 +285,21 @@ public class SwipeDeckView extends View {
         mText.setColor(mAccent);
         c.drawText(match, r.left + pad + Ui.dp(getContext(), 6),
                 matchTop + matchH - Ui.dp(getContext(), 3.4f), mText);
+
+        // Provider name on the same line as the match pill, so every card
+        // carries both the title/poster and the app that supplies it.
+        if (m.providerName.length() > 0) {
+            float available = textW - matchW - Ui.dp(getContext(), 10);
+            if (available > Ui.dp(getContext(), 18)) {
+                mText.setTypeface(Ui.MEDIUM);
+                mText.setTextSize(Ui.sp(getContext(), 6.4f));
+                mText.setColor(0xFFC4CDDB);
+                String provider = Ui.ellipsize(mText, m.providerName, available);
+                float pw = mText.measureText(provider);
+                c.drawText(provider, r.right - pad - pw,
+                        matchTop + matchH - Ui.dp(getContext(), 3.4f), mText);
+            }
+        }
 
         if (active && isFocused()) {
             mPaint.setStyle(Paint.Style.STROKE);

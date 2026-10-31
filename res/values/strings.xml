@@ -45,6 +45,16 @@
     <string name="apps">Apps</string>
     <string name="apps_lead">Installed &amp; main apps</string>
     <string name="apps_empty">No installed apps found</string>
-    <string name="apps_hint">SYSTEM APPS HIDDEN &#183; BACK TO CLOSE</string>
+    <string name="apps_hint">BACK TO CLOSE</string>
+    <string name="add_apps">Add apps</string>
+    <string name="picker_title">Add apps</string>
+    <string name="picker_lead">Choose apps for your tray</string>
+    <string name="picker_empty">No launchable apps found</string>
+    <string name="picker_save">Save</string>
+    <string name="picker_reset">Reset</string>
+    <string name="picker_count">0 selected</string>
+    <string name="picker_hint">OK TO TOGGLE · SAVE TO APPLY</string>
+    <string name="developer">Developer</string>
+    <string name="settings_lead_developer">App tray, recommendations, Home watcher and system controls.</string>
     <string name="close">Close</string>
 </resources>

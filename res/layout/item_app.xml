@@ -35,6 +35,22 @@
             android:layout_gravity="center"
             android:background="@drawable/ring_overlay"
             android:visibility="invisible"/>
+
+        <FrameLayout
+            android:id="@+id/check"
+            android:layout_width="19dp"
+            android:layout_height="19dp"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="1dp"
+            android:layout_marginRight="1dp"
+            android:visibility="gone">
+
+            <com.aurora.home.IconView
+                android:id="@+id/check_icon"
+                android:layout_width="11dp"
+                android:layout_height="11dp"
+                android:layout_gravity="center"/>
+        </FrameLayout>
     </FrameLayout>
 
     <TextView

@@ -29,6 +29,15 @@ public final class Prefs {
     public static final String K_SHOW_PRIME = "show_prime";
     public static final String K_DIAGNOSTICS = "diagnostics";
     public static final String K_WX_CACHE = "wx_cache";
+    /** App tray customisation. Empty/absent means "show every launchable app". */
+    public static final String K_DRAWER_CUSTOM = "drawer_custom";
+    public static final String K_DRAWER_APPS = "drawer_apps";
+    /** Recommendation rotation controls. */
+    public static final String K_REC_AUTO = "rec_auto";
+    public static final String K_REC_ROTATION = "rec_rotation";
+    public static final String K_REC_LAST = "rec_last";
+    public static final String K_REC_FORCE = "rec_force";
+    public static final String K_AUTO_UPDATE = "auto_update";
 
     private Prefs() {}
 
@@ -58,6 +67,44 @@ public final class Prefs {
 
     public static void putInt(Context c, String k, int v) {
         sp(c).edit().putInt(k, v).apply();
+    }
+
+    public static long getLong(Context c, String k, long d) {
+        return sp(c).getLong(k, d);
+    }
+
+    public static void putLong(Context c, String k, long v) {
+        sp(c).edit().putLong(k, v).apply();
+    }
+
+    /** Packages explicitly chosen for the app tray (only used when custom). */
+    public static Set<String> drawerPackages(Context c) {
+        Set<String> out = new HashSet<String>();
+        String raw = get(c, K_DRAWER_APPS, "");
+        if (raw.length() == 0) return out;
+        String[] parts = raw.split(",");
+        for (String p : parts) {
+            if (p.length() > 0) out.add(p);
+        }
+        return out;
+    }
+
+    public static void putDrawerPackages(Context c, Set<String> packages) {
+        StringBuilder sb = new StringBuilder();
+        for (String pkg : packages) {
+            if (pkg == null || pkg.length() == 0) continue;
+            if (sb.length() > 0) sb.append(',');
+            sb.append(pkg);
+        }
+        sp(c).edit().putString(K_DRAWER_APPS, sb.toString()).apply();
+    }
+
+    public static boolean drawerCustom(Context c) {
+        return getBool(c, K_DRAWER_CUSTOM, false);
+    }
+
+    public static void putDrawerCustom(Context c, boolean custom) {
+        sp(c).edit().putBoolean(K_DRAWER_CUSTOM, custom).apply();
     }
 
     /** Current theme key, with the old ocean/ember names migrated in-place. */

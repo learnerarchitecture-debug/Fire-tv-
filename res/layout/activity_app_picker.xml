@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/picker_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/window_base">
+
+    <com.aurora.home.AuroraBackgroundView
+        android:id="@+id/picker_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#8C000000"/>
+
+    <LinearLayout
+        android:id="@+id/picker_sheet"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/picker_sheet_h"
+        android:layout_gravity="center"
+        android:layout_marginLeft="46dp"
+        android:layout_marginRight="46dp"
+        android:orientation="vertical"
+        android:background="@drawable/glass_panel_strong"
+        android:elevation="24dp"
+        android:paddingLeft="24dp"
+        android:paddingRight="24dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="12dp"
+        android:clipChildren="false"
+        android:clipToPadding="false">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/picker_title"
+                    android:textColor="@color/text_primary"
+                    android:textSize="26sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.02"
+                    android:includeFontPadding="false"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="@string/picker_lead"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="10sp"
+                    android:letterSpacing="0.08"
+                    android:includeFontPadding="false"/>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/picker_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="12dp"
+                android:text="@string/picker_count"
+                android:textColor="@color/text_hint"
+                android:textSize="9sp"
+                android:letterSpacing="0.08"
+                android:includeFontPadding="false"/>
+
+            <FrameLayout
+                android:id="@+id/picker_close"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@drawable/settings_close_bg"
+                android:contentDescription="@string/close"
+                android:focusable="true"
+                android:clickable="true">
+
+                <com.aurora.home.IconView
+                    android:id="@+id/picker_close_icon"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_gravity="center"/>
+            </FrameLayout>
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="12dp"
+            android:background="@color/divider"/>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="8dp">
+
+            <com.aurora.home.TvGridView
+                android:id="@+id/picker_grid"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:numColumns="6"
+                android:horizontalSpacing="6dp"
+                android:verticalSpacing="4dp"
+                android:stretchMode="columnWidth"
+                android:gravity="top"
+                android:listSelector="@android:color/transparent"
+                android:drawSelectorOnTop="false"
+                android:cacheColorHint="@android:color/transparent"
+                android:scrollbars="none"
+                android:fadingEdge="vertical"
+                android:clipToPadding="false"
+                android:clipChildren="false"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/picker_empty"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="@string/picker_empty"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:visibility="gone"/>
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="34dp"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:id="@+id/picker_reset"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/dock_item_bg"
+                android:paddingLeft="10dp"
+                android:paddingRight="12dp"
+                android:focusable="true"
+                android:clickable="true">
+
+                <com.aurora.home.IconView
+                    android:id="@+id/picker_reset_icon"
+                    android:layout_width="13dp"
+                    android:layout_height="13dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="6dp"
+                    android:text="@string/picker_reset"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="9sp"
+                    android:includeFontPadding="false"/>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginLeft="12dp"
+                android:text="@string/picker_hint"
+                android:textColor="@color/text_hint"
+                android:textSize="7sp"
+                android:letterSpacing="0.12"
+                android:includeFontPadding="false"/>
+
+            <LinearLayout
+                android:id="@+id/picker_save"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/btn_primary"
+                android:paddingLeft="14dp"
+                android:paddingRight="15dp"
+                android:focusable="true"
+                android:clickable="true">
+
+                <com.aurora.home.IconView
+                    android:id="@+id/picker_save_icon"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="6dp"
+                    android:text="@string/picker_save"
+                    android:textColor="#12151C"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:includeFontPadding="false"/>
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

@@ -8,6 +8,7 @@ import android.content.res.ColorStateList;
 import android.graphics.drawable.Drawable;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -49,11 +50,11 @@ public class SettingsActivity extends Activity {
     private static final String PKG_PRIME = "com.amazon.avod";
 
     private static final String[] NAV_TITLES = {
-            "General", "Appearance", "Network", "Display & Sound", "Apps", "Privacy", "About"
+            "General", "Appearance", "Network", "Display & Sound", "Apps", "Privacy", "About", "Developer"
     };
     private static final int[] NAV_ICONS = {
             IconView.GEAR, IconView.PALETTE, IconView.WIFI,
-            IconView.DISPLAY, IconView.APPS, IconView.LOCK, IconView.INFO
+            IconView.DISPLAY, IconView.APPS, IconView.LOCK, IconView.INFO, IconView.GEAR
     };
 
     private AuroraBackgroundView mBg;
@@ -129,6 +130,12 @@ public class SettingsActivity extends Activity {
     protected void onDestroy() {
         super.onDestroy();
         if (mLoader != null) mLoader.destroy();
+    }
+
+    @Override
+    public void onBackPressed() {
+        finish();
+        overridePendingTransition(0, 0);
     }
 
     private void applyTheme() {
@@ -253,7 +260,8 @@ public class SettingsActivity extends Activity {
             case 3: buildDisplayPane(); break;
             case 4: buildAppsPane(); break;
             case 5: buildPrivacyPane(); break;
-            default: buildAboutPane(); break;
+            case 6: buildAboutPane(); break;
+            default: buildDeveloperPane(); break;
         }
         mScroll.scrollTo(0, 0);
         if (focusNav && index < mNavItems.size()) {
@@ -742,6 +750,30 @@ public class SettingsActivity extends Activity {
                 new BrandIconDrawable(0xFF1F8FFF, 0xFF0B3C7A, "P", BrandIconDrawable.LETTER),
                 Prefs.K_SHOW_PRIME);
 
+        addSectionLabel("APP DRAWER");
+        card = addCard();
+        addChevronRow(card, IconView.APPS, "App tray", AppCatalog.summary(this),
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        openAppPicker();
+                    }
+                });
+        addChevronRow(card, IconView.PLUS, "Add apps",
+                "Choose installed apps for the drawer", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        openAppPicker();
+                    }
+                });
+        addChevronRow(card, IconView.APPS, "Open app drawer",
+                "Preview the tray on the home screen", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        startActivity(new Intent(SettingsActivity.this, AppDrawerActivity.class));
+                    }
+                });
+
         addSectionLabel("SYSTEM");
         card = addCard();
         addChevronRow(card, IconView.APPS, "Manage installed apps",
@@ -767,8 +799,8 @@ public class SettingsActivity extends Activity {
                     }
                 });
         addNote("The dock is intentionally limited to YouTube, Netflix and Prime Video. "
-                + "All other installed and main apps live in the Apps drawer on the home screen. "
-                + "Fire OS system apps stay hidden.");
+                + "The Apps drawer shows every installed app and can also include Fire OS "
+                + "system apps that you add from Add apps.");
     }
 
     private void buildPrivacyPane() {
@@ -877,6 +909,13 @@ public class SettingsActivity extends Activity {
                         showAboutDialog();
                     }
                 });
+        addChevronRow(card, IconView.REFRESH, "Check for updates",
+                "Version " + versionName() + " · latest build", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        checkForUpdates();
+                    }
+                });
         addChevronRow(card, IconView.APPS, "Set as default home",
                 "Home key watcher", new View.OnClickListener() {
                     @Override
@@ -892,6 +931,264 @@ public class SettingsActivity extends Activity {
                     }
                 });
         addNote("Made for Fire TV. All artwork is drawn on-device.");
+    }
+
+    private void buildDeveloperPane() {
+        addHeader("Developer", getString(R.string.settings_lead_developer));
+
+        addSectionLabel("APP TRAY");
+        LinearLayout card = addCard();
+        addChevronRow(card, IconView.APPS, "App tray", AppCatalog.summary(this),
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        openAppPicker();
+                    }
+                });
+        addChevronRow(card, IconView.PLUS, "Add apps",
+                "Choose installed apps for the drawer", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        openAppPicker();
+                    }
+                });
+        addChevronRow(card, IconView.REFRESH, "Reset tray to automatic",
+                "Show every installed app again", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        AppCatalog.reset(SettingsActivity.this);
+                        showPane(mPane, true);
+                        toast("App tray reset to automatic");
+                    }
+                });
+        addChevronRow(card, IconView.APPS, "Open app drawer",
+                "Preview the tray on the home screen", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        startActivity(new Intent(SettingsActivity.this, AppDrawerActivity.class));
+                    }
+                });
+
+        addSectionLabel("RECOMMENDATIONS");
+        card = addCard();
+        addToggleRow(card, IconView.REFRESH, "Rotate every five minutes",
+                "Refresh the featured pick, rail and deck automatically",
+                Prefs.K_REC_AUTO, true);
+        addChevronRow(card, IconView.REFRESH, "Rotate now",
+                "Pick the next set immediately", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Recommendations.advance(SettingsActivity.this);
+                        showPane(mPane, true);
+                        toast("Recommendations rotated");
+                    }
+                });
+        addChevronRow(card, IconView.INFO, "Sources",
+                Recommendations.providerNames(this), new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showProvidersDialog();
+                    }
+                });
+
+        addSectionLabel("HOME WATCHER");
+        card = addCard();
+        addChevronRow(card, IconView.APPS, "Home key watcher",
+                HomeKeyReceiver.isEnabled(this) ? "Enabled · press Home to return" : "Disabled",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showDefaultHomeDialog();
+                    }
+                });
+        addChevronRow(card, IconView.INFO, "Usage access",
+                HomeKeyWatcherService.hasUsageAccess(this) ? "Granted" : "Not granted",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showDefaultHomeDialog();
+                    }
+                });
+
+        addSectionLabel("UPDATES");
+        card = addCard();
+        addChevronRow(card, IconView.REFRESH, "Check for updates",
+                "Version " + versionName() + " · installed build", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        checkForUpdates();
+                    }
+                });
+        addToggleRow(card, IconView.REFRESH, "Auto-check for updates",
+                "Detect new builds automatically (checks release feed)",
+                Prefs.K_AUTO_UPDATE, true);
+        addChevronRow(card, IconView.INFO, "Update channel",
+                "Public release feed · no account needed", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showUpdateInfoDialog();
+                    }
+                });
+        addChevronRow(card, IconView.PIN, "ADB debugging",
+                "Developer options · USB / wireless debugging", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        tryOpen("android.settings.DEVELOPMENT_SETTINGS", null);
+                    }
+                });
+        addChevronRow(card, IconView.LOCK, "Install unknown sources",
+                "Allow APK installs from files and browsers", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        tryOpen("android.settings.SECURITY_SETTINGS", null);
+                    }
+                });
+        addNote("Developer options mirror the home-screen controls. "
+                + "Changes apply immediately.");
+    }
+
+    private void openAppPicker() {
+        startActivity(new Intent(this, AppPickerActivity.class));
+    }
+
+    private void showProvidersDialog() {
+        dialogBuilder()
+                .setTitle("Recommendation sources")
+                .setMessage(Recommendations.providerSummary(this))
+                .setPositiveButton("Rotate now", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Recommendations.advance(SettingsActivity.this);
+                        showPane(mPane, true);
+                        toast("Recommendations rotated");
+                    }
+                })
+                .setNegativeButton("Close", null)
+                .show();
+    }
+
+    private void showUpdateInfoDialog() {
+        dialogBuilder()
+                .setTitle("Updates")
+                .setMessage("OBAA Home checks the project's public release feed "
+                        + "for a newer build, then falls back to the latest APK on the "
+                        + "main branch.\n\nInstalled version: " + versionName()
+                        + "\n\nNo account or sign-in is required.")
+                .setPositiveButton("Check now", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        checkForUpdates();
+                    }
+                })
+                .setNegativeButton("Close", null)
+                .show();
+    }
+
+    private void checkForUpdates() {
+        final AlertDialog dialog = dialogBuilder()
+                .setTitle("Check for updates")
+                .setMessage("Looking for the latest build…")
+                .setCancelable(false)
+                .create();
+        dialog.show();
+        UpdateChecker.check(this, new UpdateChecker.Callback() {
+            @Override
+            public void onResult(final UpdateChecker.Update update) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!isFinishing()) dialog.dismiss();
+                        showUpdateResult(update);
+                    }
+                });
+            }
+
+            @Override
+            public void onError(final String message) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!isFinishing()) dialog.dismiss();
+                        dialogBuilder()
+                                .setTitle("Couldn't check for updates")
+                                .setMessage(message == null || message.length() == 0
+                                        ? "Check the network connection and try again."
+                                        : message)
+                                .setPositiveButton("OK", null)
+                                .show();
+                    }
+                });
+            }
+        });
+    }
+
+    private void showUpdateResult(final UpdateChecker.Update update) {
+        if (update == null) {
+            toast("Couldn't check for updates");
+            return;
+        }
+        if (!update.available) {
+            dialogBuilder()
+                    .setTitle("You're up to date")
+                    .setMessage("OBAA Home " + versionName() + " is the latest build.")
+                    .setPositiveButton("OK", null)
+                    .show();
+            return;
+        }
+        String size = "";
+        if (update.file != null && update.file.exists()) {
+            size = String.format(Locale.US, "%.1f MB", update.file.length() / 1e6);
+        }
+        String message = "A newer build is ready to install."
+                + "\n\nInstalled: " + versionName()
+                + "\nAvailable: " + update.version
+                + (size.length() > 0 ? "\nDownload: " + size : "")
+                + "\n\nThe installer opens next. Choose Install to finish.";
+        dialogBuilder()
+                .setTitle("Update OBAA Home")
+                .setMessage(message)
+                .setPositiveButton("Update OBAA Home", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        installUpdate(update);
+                    }
+                })
+                .setNegativeButton("Later", null)
+                .show();
+    }
+
+    private void installUpdate(UpdateChecker.Update update) {
+        if (update == null || update.file == null || !update.file.exists()) {
+            toast("Update file is missing. Check again.");
+            return;
+        }
+        try {
+            Intent intent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
+            intent.setData(Uri.fromFile(update.file));
+            intent.putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(intent);
+        } catch (Throwable t) {
+            try {
+                Intent view = new Intent(Intent.ACTION_VIEW);
+                view.setDataAndType(Uri.fromFile(update.file),
+                        "application/vnd.android.package-archive");
+                view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                        | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                startActivity(view);
+            } catch (Throwable t2) {
+                toast("Couldn't open the installer");
+            }
+        }
+    }
+
+    private String versionName() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Throwable t) {
+            return "2.0";
+        }
     }
 
     private void addBrandCard() {

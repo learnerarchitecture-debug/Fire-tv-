@@ -2,6 +2,7 @@ package com.aurora.home;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,7 +11,9 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class AppGridAdapter extends BaseAdapter {
 
@@ -25,6 +28,9 @@ public class AppGridAdapter extends BaseAdapter {
         ImageView icon;
         TextView label;
         View ring;
+        View check;
+        IconView checkIcon;
+        AppEntry entry;
     }
 
     public interface Listener {
@@ -39,6 +45,8 @@ public class AppGridAdapter extends BaseAdapter {
     private final int mLabelColor;
     private final float mRadiusPx;
     private final boolean mAnimateFocus;
+    private final Set<String> mSelected = new HashSet<String>();
+    private boolean mSelectMode;
     private Listener mListener;
 
     private final View.OnFocusChangeListener mFocusL = new View.OnFocusChangeListener() {
@@ -46,6 +54,8 @@ public class AppGridAdapter extends BaseAdapter {
         public void onFocusChange(View v, boolean hasFocus) {
             ViewHolder h = (ViewHolder) v.getTag();
             if (h == null) return;
+            boolean selected = mSelectMode && h.entry != null
+                    && mSelected.contains(h.entry.pkg);
             if (hasFocus) {
                 if (mAnimateFocus) {
                     v.animate().scaleX(1.06f).scaleY(1.06f).setDuration(90).start();
@@ -53,9 +63,6 @@ public class AppGridAdapter extends BaseAdapter {
                     v.setScaleX(1f);
                     v.setScaleY(1f);
                 }
-                h.ring.setVisibility(View.VISIBLE);
-                h.label.setTextColor(mAccent);
-                h.label.setSelected(true);
             } else {
                 if (mAnimateFocus) {
                     v.animate().scaleX(1f).scaleY(1f).setDuration(90).start();
@@ -63,10 +70,10 @@ public class AppGridAdapter extends BaseAdapter {
                     v.setScaleX(1f);
                     v.setScaleY(1f);
                 }
-                h.ring.setVisibility(View.INVISIBLE);
-                h.label.setTextColor(mLabelColor);
-                h.label.setSelected(false);
             }
+            h.ring.setVisibility(hasFocus || selected ? View.VISIBLE : View.INVISIBLE);
+            h.label.setTextColor(hasFocus || selected ? mAccent : mLabelColor);
+            h.label.setSelected(hasFocus);
         }
     };
 
@@ -88,6 +95,30 @@ public class AppGridAdapter extends BaseAdapter {
         mApps.clear();
         mApps.addAll(apps);
         notifyDataSetChanged();
+    }
+
+    public void setSelectMode(boolean selectMode) {
+        mSelectMode = selectMode;
+        notifyDataSetChanged();
+    }
+
+    public void setSelected(Set<String> packages) {
+        mSelected.clear();
+        if (packages != null) mSelected.addAll(packages);
+        notifyDataSetChanged();
+    }
+
+    public boolean isSelected(String pkg) {
+        return mSelected.contains(pkg);
+    }
+
+    public void toggleSelected(String pkg) {
+        if (pkg == null) return;
+        if (!mSelected.remove(pkg)) mSelected.add(pkg);
+    }
+
+    public Set<String> getSelected() {
+        return new HashSet<String>(mSelected);
     }
 
     public AppEntry get(int position) {
@@ -119,6 +150,8 @@ public class AppGridAdapter extends BaseAdapter {
             h.icon = (ImageView) v.findViewById(R.id.icon);
             h.label = (TextView) v.findViewById(R.id.label);
             h.ring = v.findViewById(R.id.ring);
+            h.check = v.findViewById(R.id.check);
+            h.checkIcon = (IconView) v.findViewById(R.id.check_icon);
             v.setTag(h);
             v.setOnFocusChangeListener(mFocusL);
         } else {
@@ -126,6 +159,7 @@ public class AppGridAdapter extends BaseAdapter {
         }
 
         final AppEntry e = mApps.get(position);
+        h.entry = e;
         h.label.setText(e.label);
         h.icon.setTag(e.pkg);
 
@@ -139,6 +173,20 @@ public class AppGridAdapter extends BaseAdapter {
         if (b == null) {
             mLoader.queue(e.pkg, h.icon);
         }
+
+        boolean selected = mSelectMode && mSelected.contains(e.pkg);
+        h.check.setVisibility(selected ? View.VISIBLE : View.GONE);
+        if (selected) {
+            GradientDrawable dot = new GradientDrawable();
+            dot.setShape(GradientDrawable.OVAL);
+            dot.setColor(mAccent);
+            h.check.setBackgroundDrawable(dot);
+            h.checkIcon.setMode(IconView.CHECK);
+            h.checkIcon.setColor(0xFF12151C, 0);
+        }
+        h.ring.setVisibility(v.isFocused() || selected ? View.VISIBLE : View.INVISIBLE);
+        h.label.setTextColor(v.isFocused() || selected ? mAccent : mLabelColor);
+
         v.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {

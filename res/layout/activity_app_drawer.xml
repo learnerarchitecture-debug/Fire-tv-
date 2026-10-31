@@ -104,7 +104,7 @@
             android:layout_weight="1"
             android:layout_marginTop="6dp">
 
-            <GridView
+            <com.aurora.home.TvGridView
                 android:id="@+id/drawer_grid"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -112,7 +112,7 @@
                 android:horizontalSpacing="6dp"
                 android:verticalSpacing="4dp"
                 android:stretchMode="columnWidth"
-                android:gravity="center"
+                android:gravity="top"
                 android:listSelector="@android:color/transparent"
                 android:drawSelectorOnTop="false"
                 android:cacheColorHint="@android:color/transparent"
@@ -134,15 +134,52 @@
                 android:visibility="gone"/>
         </FrameLayout>
 
-        <TextView
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:gravity="center"
-            android:text="@string/apps_hint"
-            android:textColor="@color/text_hint"
-            android:textSize="7.5sp"
-            android:letterSpacing="0.14"
-            android:includeFontPadding="false"/>
+            android:layout_height="30dp"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:id="@+id/drawer_add"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/dock_item_bg"
+                android:paddingLeft="10dp"
+                android:paddingRight="12dp"
+                android:focusable="true"
+                android:clickable="true"
+                android:contentDescription="@string/add_apps">
+
+                <com.aurora.home.IconView
+                    android:id="@+id/drawer_add_icon"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="6dp"
+                    android:text="@string/add_apps"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="9sp"
+                    android:includeFontPadding="false"/>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginLeft="10dp"
+                android:gravity="right"
+                android:text="@string/apps_hint"
+                android:textColor="@color/text_hint"
+                android:textSize="7sp"
+                android:letterSpacing="0.12"
+                android:includeFontPadding="false"/>
+        </LinearLayout>
     </LinearLayout>
 </FrameLayout>

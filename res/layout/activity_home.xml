@@ -739,6 +739,36 @@
                     android:includeFontPadding="false"/>
             </LinearLayout>
 
+            <!-- Direct Add apps button on home footer -->
+            <LinearLayout
+                android:id="@+id/dock_add_apps"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:layout_marginLeft="3dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/dock_item_bg"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
+                android:focusable="true"
+                android:clickable="true"
+                android:contentDescription="@string/add_apps">
+
+                <com.aurora.home.IconView
+                    android:id="@+id/dock_add_icon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="6dp"
+                    android:text="@string/add_apps"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/footer_app_label_size"
+                    android:includeFontPadding="false"/>
+            </LinearLayout>
+
             <TextView
                 android:id="@+id/dock_status"
                 android:layout_width="0dp"

@@ -60,11 +60,17 @@ public class HomeActivity extends Activity {
     private ImageView mFooterIcon1, mFooterIcon2, mFooterIcon3;
     private TextView mFooterLabel1, mFooterLabel2, mFooterLabel3;
     private TextView mDockStatus;
+    private LinearLayout mDockAddApps;
+    private IconView mDockAddIcon;
     private IconLoader mLoader;
     private final Handler mUi = new Handler();
     private Runnable mTick;
+    private Runnable mRotationTick;
     private long mLastWxRefresh = 0;
     private Movie mFeatured;
+    private List<Movie> mRecommendations = new ArrayList<Movie>();
+    private String mProviderSignature = "";
+    private int mRotation = Integer.MIN_VALUE;
     private Set<String> mSaved = new HashSet<String>();
     private int mAccent = 0xFFFFB45E;
     private boolean mFirstResume = true;
@@ -125,6 +131,21 @@ public class HomeActivity extends Activity {
         mFooterLabel2 = (TextView) findViewById(R.id.footer_app2_label);
         mFooterLabel3 = (TextView) findViewById(R.id.footer_app3_label);
         mDockStatus = (TextView) findViewById(R.id.dock_status);
+        mDockAddApps = (LinearLayout) findViewById(R.id.dock_add_apps);
+        mDockAddIcon = (IconView) findViewById(R.id.dock_add_icon);
+        if (mDockAddIcon != null) {
+            mDockAddIcon.setMode(IconView.PLUS);
+            mDockAddIcon.setColor(Prefs.accent(this), 0);
+        }
+        if (mDockAddApps != null) {
+            mDockAddApps.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    startActivity(new Intent(HomeActivity.this, AppPickerActivity.class));
+                    overridePendingTransition(0, 0);
+                }
+            });
+        }
 
         mBrandIcon.setMode(IconView.AURORA);
         mBrandIcon.setColor(0xFFFFFFFF, 0);
@@ -198,9 +219,11 @@ public class HomeActivity extends Activity {
             }
         });
 
-        buildRail();
         setupDockApps();
-        setFeatured(MovieCatalog.MOVIES.get(0), false);
+        loadRecommendations(true);
+        if (Prefs.getBool(this, Prefs.K_AUTO_UPDATE, true)) {
+            startAutoUpdateCheck();
+        }
 
         View.OnClickListener openSettings = new View.OnClickListener() {
             @Override
@@ -265,14 +288,15 @@ public class HomeActivity extends Activity {
     private void buildRail() {
         mRailCards.clear();
         mRail.removeAllViews();
-        int[] indexes = {1, 2, 3, 4};
-        for (int i = 0; i < indexes.length; i++) {
-            final Movie movie = MovieCatalog.MOVIES.get(indexes[i]);
+        if (mRecommendations.size() < 2) return;
+        int count = Math.min(4, mRecommendations.size() - 1);
+        for (int i = 0; i < count; i++) {
+            final Movie movie = mRecommendations.get(i + 1);
             MovieCardView card = new MovieCardView(this);
             card.setMovie(movie);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     0, LinearLayout.LayoutParams.MATCH_PARENT, 1f);
-            if (i < indexes.length - 1) lp.rightMargin = (int) Ui.dp(this, 8);
+            if (i < count - 1) lp.rightMargin = (int) Ui.dp(this, 8);
             card.setLayoutParams(lp);
             card.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -282,6 +306,43 @@ public class HomeActivity extends Activity {
             });
             mRail.addView(card);
             mRailCards.add(card);
+        }
+    }
+
+    /**
+     * Rebuilds the featured pick, rail and deck when the five-minute window
+     * advances or the set of installed OTT providers changes.
+     */
+    private void loadRecommendations(boolean force) {
+        int rotation = Recommendations.rotationForNow(this);
+        String signature = Recommendations.signature(this);
+        if (!force && rotation == mRotation && signature.equals(mProviderSignature)) return;
+        mRotation = rotation;
+        mProviderSignature = signature;
+        mRecommendations = Recommendations.build(this, rotation);
+        mDeck.setMovies(mRecommendations);
+        buildRail();
+        if (!mRecommendations.isEmpty()) {
+            setFeatured(mRecommendations.get(0), false);
+        }
+    }
+
+    private void startRotationWatch() {
+        stopRotationWatch();
+        mRotationTick = new Runnable() {
+            @Override
+            public void run() {
+                loadRecommendations(false);
+                mUi.postDelayed(this, 30000);
+            }
+        };
+        mUi.postDelayed(mRotationTick, 30000);
+    }
+
+    private void stopRotationWatch() {
+        if (mRotationTick != null) {
+            mUi.removeCallbacks(mRotationTick);
+            mRotationTick = null;
         }
     }
 
@@ -345,11 +406,13 @@ public class HomeActivity extends Activity {
         Ui.immersive(this);
         mSaved = Prefs.savedIds(this);
         mDeck.setSavedIds(mSaved);
+        loadRecommendations(false);
         applyTheme();
         updateDockVisibility();
         updateClock();
         updateDockStatus();
         startClock();
+        startRotationWatch();
         Weather.Data d = Weather.loadCache(this);
         if (d != null) renderWeather(d);
         maybeRefreshWeather();
@@ -369,6 +432,7 @@ public class HomeActivity extends Activity {
         super.onPause();
         sResumed = false;
         stopClock();
+        stopRotationWatch();
     }
 
     @Override
@@ -443,7 +507,9 @@ public class HomeActivity extends Activity {
         if (movie == null) return;
         mFeatured = movie;
         mHeroArt.setMovie(movie);
-        mHeroEyebrow.setText("FEATURED · " + movie.tag);
+        String eyebrow = "FEATURED · " + movie.tag;
+        if (movie.providerName.length() > 0) eyebrow += " · " + movie.providerName;
+        mHeroEyebrow.setText(eyebrow.toUpperCase(Locale.US));
         mHeroTitle.setText(movie.title);
         mHeroMeta.setText(movie.meta());
         mHeroDesc.setText(movie.description);
@@ -564,14 +630,19 @@ public class HomeActivity extends Activity {
 
     private void showMovieDetails(final Movie movie) {
         String watchlist = mSaved.contains(movie.id) ? "Remove from Watchlist" : "Add to Watchlist";
+        final boolean hasProvider = movie.providerPkg.length() > 0;
+        final String providerName = hasProvider ? movie.providerName : "Prime Video";
+        final String providerPkg = hasProvider ? movie.providerPkg : PKG_PRIME;
+        String message = movie.meta() + "\n\n" + movie.description
+                + "\n\n" + movie.match + "% match for you";
+        if (hasProvider) message += "\nAvailable in " + providerName;
         dialogBuilder()
                 .setTitle(movie.title)
-                .setMessage(movie.meta() + "\n\n" + movie.description
-                        + "\n\n" + movie.match + "% match for you")
-                .setPositiveButton("Open Prime Video", new DialogInterface.OnClickListener() {
+                .setMessage(message)
+                .setPositiveButton("Open " + providerName, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        launchPackage(PKG_PRIME, "Prime Video");
+                        launchPackage(providerPkg, providerName);
                     }
                 })
                 .setNeutralButton(watchlist, new DialogInterface.OnClickListener() {
@@ -592,6 +663,27 @@ public class HomeActivity extends Activity {
     private void openAppDrawer() {
         startActivity(new Intent(this, AppDrawerActivity.class));
         overridePendingTransition(0, 0);
+    }
+
+    private void startAutoUpdateCheck() {
+        UpdateChecker.check(this, new UpdateChecker.Callback() {
+            @Override
+            public void onResult(final UpdateChecker.Update update) {
+                if (update != null && update.available && !isFinishing()) {
+                    mUi.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            toast("Update available: " + update.version + " — open Settings to install");
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                // Silent background check.
+            }
+        });
     }
 
     private void launchPackage(String pkg, String label) {
