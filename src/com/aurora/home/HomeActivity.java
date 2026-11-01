@@ -25,6 +25,7 @@ import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -51,15 +52,7 @@ public class HomeActivity extends Activity {
     private TextView mHeroSaveLabel;
     private LinearLayout mHeroPlay, mHeroSave;
     private IconView mPlayIcon, mSaveIcon, mSettingsIcon, mBrandIcon;
-    private IconView mUndoIcon, mPassIcon, mDeckSaveIcon, mDockSettingsIcon, mDockAppsIcon;
-    private SwipeDeckView mDeck;
-    private TextView mDeckCount;
-    private FrameLayout mUndoBtn;
-    private LinearLayout mRail;
-    private final List<MovieCardView> mRailCards = new ArrayList<MovieCardView>();
-    private LinearLayout mFooterApp1, mFooterApp2, mFooterApp3;
-    private ImageView mFooterIcon1, mFooterIcon2, mFooterIcon3;
-    private TextView mFooterLabel1, mFooterLabel2, mFooterLabel3;
+    private IconView mDockSettingsIcon, mDockAppsIcon;
     private TextView mDockStatus;
     private LinearLayout mDockAddApps;
     private LinearLayout mDockUpdate;
@@ -114,24 +107,6 @@ public class HomeActivity extends Activity {
         mSaveIcon = (IconView) findViewById(R.id.save_icon);
         mSettingsIcon = (IconView) findViewById(R.id.settings_icon);
         mBrandIcon = (IconView) findViewById(R.id.brand_icon);
-        mUndoIcon = (IconView) findViewById(R.id.undo_icon);
-        mPassIcon = (IconView) findViewById(R.id.pass_icon);
-        mDeckSaveIcon = (IconView) findViewById(R.id.deck_save_icon);
-        mDockSettingsIcon = (IconView) findViewById(R.id.dock_settings_icon);
-        mDockAppsIcon = (IconView) findViewById(R.id.dock_apps_icon);
-        mDeck = (SwipeDeckView) findViewById(R.id.swipe_deck);
-        mDeckCount = (TextView) findViewById(R.id.deck_count);
-        mUndoBtn = (FrameLayout) findViewById(R.id.deck_undo);
-        mRail = (LinearLayout) findViewById(R.id.rail);
-        mFooterApp1 = (LinearLayout) findViewById(R.id.footer_app1);
-        mFooterApp2 = (LinearLayout) findViewById(R.id.footer_app2);
-        mFooterApp3 = (LinearLayout) findViewById(R.id.footer_app3);
-        mFooterIcon1 = (ImageView) findViewById(R.id.footer_app1_icon);
-        mFooterIcon2 = (ImageView) findViewById(R.id.footer_app2_icon);
-        mFooterIcon3 = (ImageView) findViewById(R.id.footer_app3_icon);
-        mFooterLabel1 = (TextView) findViewById(R.id.footer_app1_label);
-        mFooterLabel2 = (TextView) findViewById(R.id.footer_app2_label);
-        mFooterLabel3 = (TextView) findViewById(R.id.footer_app3_label);
         mDockStatus = (TextView) findViewById(R.id.dock_status);
         mDockAddApps = (LinearLayout) findViewById(R.id.dock_add_apps);
         if (mDockAddApps != null) {
@@ -170,73 +145,19 @@ public class HomeActivity extends Activity {
         mPlayIcon.setColor(0xFF12151C, 0);
         mSaveIcon.setMode(IconView.HEART);
         mSaveIcon.setColor(0xFFFFFFFF, 0);
-        mUndoIcon.setMode(IconView.UNDO);
-        mUndoIcon.setColor(0xFFA5ADBE, 0);
-        mPassIcon.setMode(IconView.CLOSE);
-        mPassIcon.setColor(0xFFFF9A8E, 0);
-        mDeckSaveIcon.setMode(IconView.HEART);
-        mDeckSaveIcon.setColor(0xFF6FE3B0, 0);
+        mBrandIcon.setMode(IconView.AURORA);
+        mBrandIcon.setColor(0xFFFFFFFF, 0);
+        mPlayIcon.setMode(IconView.PLAY);
+        mPlayIcon.setColor(0xFF12151C, 0);
+        mSaveIcon.setMode(IconView.HEART);
+        mSaveIcon.setColor(0xFFFFFFFF, 0);
         mDockSettingsIcon.setMode(IconView.GEAR);
         mDockAppsIcon.setMode(IconView.APPS);
         mSettingsIcon.setMode(IconView.GEAR);
 
         mLoader = new IconLoader(this, 96);
         mSaved = Prefs.savedIds(this);
-        mDeck.setSavedIds(mSaved);
-        mDeck.setListener(new SwipeDeckView.Listener() {
-            @Override
-            public void onSwiped(Movie movie, boolean saved) {
-                if (saved) {
-                    if (mSaved.add(movie.id)) {
-                        Prefs.putSavedIds(HomeActivity.this, mSaved);
-                        mDeck.setSavedIds(mSaved);
-                        toast("Saved to watchlist");
-                    } else {
-                        toast("Already in your watchlist");
-                    }
-                } else {
-                    toast("Passed");
-                }
-            }
-
-            @Override
-            public void onUndo(Movie movie, boolean wasSaved) {
-                if (wasSaved && movie != null && mSaved.remove(movie.id)) {
-                    Prefs.putSavedIds(HomeActivity.this, mSaved);
-                    mDeck.setSavedIds(mSaved);
-                    updateFeaturedSave();
-                    toast("Undone · removed from watchlist");
-                } else {
-                    toast("Undone");
-                }
-            }
-
-            @Override
-            public void onDeckChanged(int position, int total, boolean canUndo) {
-                if (mDeckCount != null) {
-                    mDeckCount.setText((position + 1) + " / " + total);
-                }
-                if (mUndoBtn != null) {
-                    boolean undoFocused = mUndoBtn.isFocused();
-                    mUndoBtn.setEnabled(canUndo);
-                    mUndoBtn.setFocusable(canUndo);
-                    mUndoBtn.setClickable(canUndo);
-                    mUndoBtn.setAlpha(canUndo ? 1f : 0.35f);
-                    mUndoIcon.setColor(canUndo ? 0xFFF2F4F8 : 0xFFA5ADBE, 0);
-                    if (!canUndo && undoFocused) {
-                        mDeck.requestFocus();
-                    }
-                }
-            }
-
-            @Override
-            public void onOpen(Movie movie) {
-                setFeatured(movie, false);
-                showMovieDetails(movie);
-            }
-        });
-
-        bindDockApps();
+        bindHomeApps();
         loadRecommendations(true);
         if (Prefs.getBool(this, Prefs.K_AUTO_UPDATE, true)) {
             startAutoUpdateCheck();
@@ -273,25 +194,15 @@ public class HomeActivity extends Activity {
                 toast(saved ? "Saved to watchlist" : "Removed from watchlist");
             }
         });
-        mUndoBtn.setOnClickListener(new View.OnClickListener() {
+        // Hero next recommendation
+        findViewById(R.id.hero_next).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mDeck.undo();
+                if (mRecommendations.size() > 1) {
+                    setFeatured(mRecommendations.get(1), false);
+                }
             }
         });
-        findViewById(R.id.deck_pass).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mDeck.swipeLeft();
-            }
-        });
-        findViewById(R.id.deck_save).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mDeck.swipeRight();
-            }
-        });
-
         applyTheme();
         updateClock();
         updateDockStatus();
@@ -300,48 +211,6 @@ public class HomeActivity extends Activity {
         Weather.Data d = Weather.loadCache(this);
         if (d != null) renderWeather(d);
         maybeRefreshWeather();
-    }
-
-    private void buildRail() {
-        mRailCards.clear();
-        mRail.removeAllViews();
-        if (mRecommendations.size() < 2) return;
-        int count = Math.min(4, mRecommendations.size() - 1);
-        for (int i = 0; i < count; i++) {
-            final Movie movie = mRecommendations.get(i + 1);
-            MovieCardView card = new MovieCardView(this);
-            card.setMovie(movie);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    0, LinearLayout.LayoutParams.MATCH_PARENT, 1f);
-            if (i < count - 1) lp.rightMargin = (int) Ui.dp(this, 8);
-            card.setLayoutParams(lp);
-            card.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    setFeatured(movie, true);
-                }
-            });
-            mRail.addView(card);
-            mRailCards.add(card);
-        }
-    }
-
-    /**
-     * Rebuilds the featured pick, rail and deck when the five-minute window
-     * advances or the set of installed OTT providers changes.
-     */
-    private void loadRecommendations(boolean force) {
-        int rotation = Recommendations.rotationForNow(this);
-        String signature = Recommendations.signature(this);
-        if (!force && rotation == mRotation && signature.equals(mProviderSignature)) return;
-        mRotation = rotation;
-        mProviderSignature = signature;
-        mRecommendations = Recommendations.build(this, rotation);
-        mDeck.setMovies(mRecommendations);
-        buildRail();
-        if (!mRecommendations.isEmpty()) {
-            setFeatured(mRecommendations.get(0), false);
-        }
     }
 
     private void startRotationWatch() {
@@ -363,75 +232,33 @@ public class HomeActivity extends Activity {
         }
     }
 
-    private void bindDockApps() {
-        Set<String> custom = Prefs.homeDockPackages(this);
-        String[] slots = new String[3];
-        if (custom.size() == 3) {
-            int i = 0;
-            for (String pkg : custom) { slots[i++] = pkg; }
-        } else {
-            slots[0] = PKG_YOUTUBE; slots[1] = PKG_NETFLIX; slots[2] = PKG_PRIME;
+    private void loadRecommendations(boolean force) {
+        int rotation = Recommendations.rotationForNow(this);
+        String signature = Recommendations.signature(this);
+        if (!force && rotation == mRotation && signature.equals(mProviderSignature)) return;
+        mRotation = rotation;
+        mProviderSignature = signature;
+        mRecommendations = Recommendations.build(this, rotation);
+        if (!mRecommendations.isEmpty()) {
+            setFeatured(mRecommendations.get(0), false);
         }
-        bindDockApp(mFooterApp1, mFooterIcon1, mFooterLabel1,
-                slots[0], null,
-                new BrandIconDrawable(0xFFFF3B30, 0xFFB31217, "", BrandIconDrawable.PLAY),
-                labelFor(slots[0]), Prefs.K_SHOW_YOUTUBE);
-        bindDockApp(mFooterApp2, mFooterIcon2, mFooterLabel2,
-                slots[1], null,
-                new BrandIconDrawable(0xFFE50914, 0xFF4A0508, "N", BrandIconDrawable.LETTER),
-                labelFor(slots[1]), Prefs.K_SHOW_NETFLIX);
-        bindDockApp(mFooterApp3, mFooterIcon3, mFooterLabel3,
-                slots[2], null,
-                new BrandIconDrawable(0xFF1F8FFF, 0xFF0B3C7A, "P", BrandIconDrawable.LETTER),
-                labelFor(slots[2]), Prefs.K_SHOW_PRIME);
     }
 
-    private String labelFor(String pkg) {
-        if (PKG_YOUTUBE.equals(pkg) || PKG_YOUTUBE_ALT.equals(pkg)) return "YouTube";
-        if (PKG_NETFLIX.equals(pkg) || PKG_NETFLIX_ALT.equals(pkg)) return "Netflix";
-        if (PKG_PRIME.equals(pkg)) return "Prime Video";
+    private void bindHomeApps() {
+        // Home dock apps bound via layout; picker saves to Prefs.K_HOME_DOCK.
+    }
+
+    private String loadLabel(String pkg) {
+        if (pkg == null) return "";
         try {
             return getPackageManager().getApplicationLabel(getPackageManager().getApplicationInfo(pkg, 0)).toString();
         } catch (Throwable t) { return pkg; }
     }
 
-    private void bindDockApp(LinearLayout item, ImageView icon, TextView label,
-                             String primary, String alt, Drawable fallback,
-                             final String displayName, final String prefKey) {
-        final String resolved = isInstalled(primary) ? primary
-                : (alt != null && isInstalled(alt) ? alt : null);
-        label.setText(displayName);
-        if (resolved != null) {
-            RoundedIconDrawable rd = new RoundedIconDrawable(Ui.dp(this, 7));
-            icon.setImageDrawable(rd);
-            icon.setTag(resolved);
-            mLoader.queue(resolved, icon);
-            label.setTextColor(0xFFA5ADBE);
-        } else {
-            icon.setImageDrawable(fallback);
-            label.setTextColor(0xFF6E788C);
-        }
-        item.setVisibility(Prefs.showDockApp(this, prefKey) ? View.VISIBLE : View.GONE);
-        item.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (resolved == null) {
-                    toast(displayName + " isn't installed on this Fire TV");
-                } else {
-                    launchPackage(resolved, displayName);
-                }
-            }
-        });
+    private void updateDockVisibility() {
+        // Home dock now handled by bindHomeApps; footer apps removed.
     }
 
-    private void updateDockVisibility() {
-        mFooterApp1.setVisibility(Prefs.showDockApp(this, Prefs.K_SHOW_YOUTUBE)
-                ? View.VISIBLE : View.GONE);
-        mFooterApp2.setVisibility(Prefs.showDockApp(this, Prefs.K_SHOW_NETFLIX)
-                ? View.VISIBLE : View.GONE);
-        mFooterApp3.setVisibility(Prefs.showDockApp(this, Prefs.K_SHOW_PRIME)
-                ? View.VISIBLE : View.GONE);
-    }
 
     @Override
     protected void onResume() {
@@ -439,10 +266,8 @@ public class HomeActivity extends Activity {
         sResumed = true;
         Ui.immersive(this);
         mSaved = Prefs.savedIds(this);
-        mDeck.setSavedIds(mSaved);
         loadRecommendations(false);
         applyTheme();
-        updateDockVisibility();
         updateClock();
         updateDockStatus();
         startClock();
@@ -490,15 +315,6 @@ public class HomeActivity extends Activity {
         mDockAppsIcon.setColor(mAccent, 0);
         mHeroEyebrow.setTextColor(mAccent);
         mHeroPlay.setBackgroundDrawable(primaryButtonBackground());
-        findViewById(R.id.deck_undo).setBackgroundDrawable(actionButtonBackground());
-        findViewById(R.id.deck_pass).setBackgroundDrawable(actionButtonBackground());
-        findViewById(R.id.deck_save).setBackgroundDrawable(actionButtonBackground());
-        mDeck.setAccent(mAccent);
-        mDeck.setAnimationsEnabled(!Prefs.reduceMotion(this));
-        for (MovieCardView c : mRailCards) {
-            c.setAccent(mAccent);
-            c.setAnimateFocus(!Prefs.reduceMotion(this));
-        }
         mWeatherChip.setVisibility(Prefs.showWeather(this) ? View.VISIBLE : View.GONE);
         Ui.applyGlassAlpha(mRoot, Prefs.glassPercent(this));
         updateFeaturedSave();
@@ -568,7 +384,6 @@ public class HomeActivity extends Activity {
             saved = true;
         }
         Prefs.putSavedIds(this, mSaved);
-        mDeck.setSavedIds(mSaved);
         updateFeaturedSave();
         return saved;
     }

@@ -550,55 +550,55 @@
             </FrameLayout>
         </LinearLayout>
 
-        <!-- Recommendation rail -->
+        <!-- Hero recommendation + Next button -->
         <LinearLayout
-            android:id="@+id/rail_section"
+            android:id="@+id/hero_row"
             android:layout_width="match_parent"
-            android:layout_height="@dimen/rail_h"
-            android:layout_marginTop="12dp"
-            android:orientation="vertical">
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:clipChildren="false"
+            android:clipToPadding="false">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+            <FrameLayout
+                android:id="@+id/hero_next"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_weight="1"
+                android:layout_marginLeft="@dimen/screen_pad"
+                android:layout_marginRight="@dimen/screen_pad"
+                android:background="@drawable/btn_ghost"
+                android:focusable="true"
+                android:clickable="true"
+                android:contentDescription="Next recommendation">
 
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/recommended"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="8sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.2"
-                    android:includeFontPadding="false"/>
-
-                <TextView
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/curated"
-                    android:textColor="@color/text_hint"
-                    android:textSize="7sp"
-                    android:letterSpacing="0.12"
-                    android:includeFontPadding="false"/>
-            </LinearLayout>
+                    android:layout_gravity="center"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-            <LinearLayout
-                android:id="@+id/rail"
-                android:layout_width="match_parent"
-                android:layout_height="62dp"
-                android:layout_marginTop="6dp"
-                android:orientation="horizontal"
-                android:clipChildren="false"
-                android:clipToPadding="false"/>
+                    <com.aurora.home.IconView
+                        android:id="@+id/hero_next_icon"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="6dp"
+                        android:text="NEXT"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="9sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.1"
+                        android:includeFontPadding="false"/>
+                </LinearLayout>
+            </FrameLayout>
         </LinearLayout>
-
-        <Space
-            android:layout_width="1dp"
-            android:layout_height="0dp"
-            android:layout_weight="1"/>
 
         <!-- Curated dock -->
         <LinearLayout

@@ -32,9 +32,16 @@ public class PosterArtView extends View {
     protected void onDraw(Canvas c) {
         float radius = Ui.dp(getContext(), 21);
         mRect.set(0, 0, getWidth(), getHeight());
-        MovieArt.drawPoster(c, mRect, mMovie, radius, mPaint);
-
-        // A very soft highlight along the top edge.
+        // Use thumbnail bitmap if present; otherwise procedural poster.
+        if (mMovie.thumbnail != null && !mMovie.thumbnail.isRecycled()) {
+            mPaint.setShader(null);
+            mPaint.setStyle(Paint.Style.FILL);
+            mPaint.setAntiAlias(true);
+            c.drawBitmap(mMovie.thumbnail, null, mRect, mPaint);
+        } else {
+            MovieArt.drawPoster(c, mRect, mMovie, radius, mPaint);
+        }
+        // Soft highlight edge (works on both bitmap and poster)
         mPaint.setShader(null);
         mPaint.setStyle(Paint.Style.STROKE);
         mPaint.setStrokeWidth(Ui.dp(getContext(), 1));

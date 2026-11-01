@@ -22,6 +22,10 @@ import java.util.Set;
  */
 public class AppPickerActivity extends Activity {
 
+    public static final String EXTRA_MODE = "picker_mode";
+    public static final int MODE_HOME = 1;
+    public static final int MODE_TRAY = 2;
+
     private TvGridView mGrid;
     private TextView mCount;
     private View mEmpty;
@@ -31,6 +35,7 @@ public class AppPickerActivity extends Activity {
     private IconLoader mLoader;
     private final Handler mUi = new Handler(Looper.getMainLooper());
     private Set<String> mSelected;
+    private int mMode = MODE_TRAY;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,6 +47,7 @@ public class AppPickerActivity extends Activity {
         bg.setTheme(Prefs.theme(this), Prefs.accent(this));
 
         mGrid = (TvGridView) findViewById(R.id.picker_grid);
+        mMode = getIntent().hasExtra(EXTRA_MODE) ? getIntent().getIntExtra(EXTRA_MODE, MODE_TRAY) : MODE_TRAY;
         mCount = (TextView) findViewById(R.id.picker_count);
         mEmpty = findViewById(R.id.picker_empty);
         mSave = findViewById(R.id.picker_save);
@@ -196,18 +202,20 @@ public class AppPickerActivity extends Activity {
         } else {
             AppCatalog.save(this, mSelected);
         }
-        // Also allow direct home-dock customization: first 3 picked -> footer
-        Set<String> dock = new HashSet<String>();
-        int count = 0;
-        for (AppGridAdapter.AppEntry e : mAdapter.getApps()) {
-            if (mSelected.contains(e.pkg)) {
-                dock.add(e.pkg);
-                count++;
-                if (count >= 3) break;
+        if (mMode == MODE_HOME) {
+            Set<String> dock = new HashSet<String>();
+            int count = 0;
+            for (AppGridAdapter.AppEntry e : mAdapter.getApps()) {
+                if (mSelected.contains(e.pkg)) {
+                    dock.add(e.pkg);
+                    count++;
+                    if (count >= 3) break;
+                }
             }
+            String val = "";
+            for (String s : dock) val += (val.isEmpty() ? "" : ",") + s;
+            Prefs.put(this, Prefs.K_HOME_DOCK, val);
         }
-        if (dock.size() > 0) Prefs.putHomeDockPackages(this, dock);
-        else Prefs.resetHomeDock(this);
         setResult(RESULT_OK, new Intent());
         toast("App tray updated");
         finish();
