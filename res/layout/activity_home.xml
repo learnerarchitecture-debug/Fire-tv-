@@ -784,6 +784,38 @@
                 android:includeFontPadding="false"/>
 
             <LinearLayout
+                android:id="@+id/dock_update"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:layout_marginRight="3dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/dock_item_bg"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
+                android:focusable="true"
+                android:clickable="true"
+                android:contentDescription="Check for updates"
+                android:visibility="gone">
+
+                <com.aurora.home.IconView
+                    android:id="@+id/dock_update_icon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"/>
+
+                <TextView
+                    android:id="@+id/dock_update_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="6dp"
+                    android:text="Update ready"
+                    android:textColor="#FFB45E"
+                    android:textSize="@dimen/footer_app_label_size"
+                    android:textStyle="bold"
+                    android:includeFontPadding="false"/>
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/dock_settings"
                 android:layout_width="wrap_content"
                 android:layout_height="38dp"

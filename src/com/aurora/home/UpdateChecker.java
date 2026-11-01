@@ -11,13 +11,11 @@ import org.json.JSONObject;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.security.MessageDigest;
 import java.util.Locale;
 
 /**
@@ -102,16 +100,33 @@ public final class UpdateChecker {
         }
 
         File apk = download(context, apkUrl);
-        String remoteHash = sha256(apk);
-        String installedHash = installedApkHash(context);
-        boolean available = installedHash == null || !installedHash.equals(remoteHash);
 
-        String version = displayVersion(tag);
+        // Compare version codes, not file hashes.  Re-signing the same build
+        // produces different bytes, which used to make every launch report an
+        // update even though nothing newer was published.
+        PackageManager pm = context.getPackageManager();
+        PackageInfo remote = pm.getPackageArchiveInfo(apk.getAbsolutePath(), 0);
+        int remoteCode = remote == null ? 0 : remote.versionCode;
+        int installedCode = installedVersionCode(context);
+
+        boolean available = remoteCode > 0 && remoteCode > installedCode;
+        String version = remote != null && remote.versionName != null
+                ? remote.versionName : displayVersion(tag);
         if (!available) {
             apk.delete();
             return new Update(false, version, null);
         }
         return new Update(true, version, apk);
+    }
+
+    private static int installedVersionCode(Context context) {
+        try {
+            PackageInfo info = context.getPackageManager()
+                    .getPackageInfo(context.getPackageName(), 0);
+            return info == null ? 0 : info.versionCode;
+        } catch (Throwable t) {
+            return 0;
+        }
     }
 
     private static String releaseJson() {
@@ -189,40 +204,6 @@ public final class UpdateChecker {
         } finally {
             try { in.close(); } catch (Throwable ignored) {}
         }
-    }
-
-    private static String installedApkHash(Context context) {
-        try {
-            PackageManager pm = context.getPackageManager();
-            PackageInfo info = pm.getPackageInfo(context.getPackageName(), 0);
-            if (info == null || info.applicationInfo == null
-                    || info.applicationInfo.sourceDir == null) {
-                return null;
-            }
-            return sha256(new File(info.applicationInfo.sourceDir));
-        } catch (Throwable t) {
-            return null;
-        }
-    }
-
-    private static String sha256(File file) throws Exception {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        InputStream in = new FileInputStream(file);
-        try {
-            byte[] buffer = new byte[8192];
-            int read;
-            while ((read = in.read(buffer)) > 0) {
-                digest.update(buffer, 0, read);
-            }
-        } finally {
-            try { in.close(); } catch (Throwable ignored) {}
-        }
-        byte[] bytes = digest.digest();
-        StringBuilder sb = new StringBuilder(bytes.length * 2);
-        for (byte b : bytes) {
-            sb.append(String.format(Locale.US, "%02x", b & 0xff));
-        }
-        return sb.toString();
     }
 
     private static String displayVersion(String tag) {

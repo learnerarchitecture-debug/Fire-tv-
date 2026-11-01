@@ -33,6 +33,42 @@ The stock launcher was backed up from `/system/priv-app/com.amazon.tv.launcher/c
 
 The package is a privileged system app and the shell UID cannot change its state. Removing it requires root or a system-signed package; neither is available here. Do not keep retrying these commands. OBAA Home works alongside the stock launcher via the usage-stats watcher, and the stock launcher remains available as a fallback.
 
+## Home resolution at boot (verified on AFTT)
+
+Fire OS does not use the normal `ACTION_MAIN` + `CATEGORY_HOME` resolver at boot. Its privileged helper `com.amazon.firehomestarter` resolves the home activity with a **Fire OS-specific category**:
+
+```text
+android.intent.action.MAIN
+fireos.intent.category.MAIN_HOME
+```
+
+Decompiling `com.amazon.firehomestarter` shows:
+
+- `MainHomeStartStrategy` builds that intent and only **enables** every matching component whose `priority > 0` (`setComponentEnabledSetting(..., ENABLED)`). It does not pick a winner.
+- The stock launcher declares one filter at `android:priority="950"` with categories `DEFAULT`, `HOME`, `fireos.intent.category.MAIN_HOME`, `LAUNCHER`, `MONKEY`.
+
+Raising OBAA Home above 950 was tested and does **not** change the result:
+
+| Declared on OBAA `HomeActivity` | `am start -a MAIN -c HOME` | `am start -a MAIN -c fireos.intent.category.MAIN_HOME` |
+| --- | --- | --- |
+| priority 1000, `HOME` + `DEFAULT` + `MAIN_HOME` in one filter | `com.amazon.tv.launcher/.ui.HomeActivity_vNext` | `com.amazon.tv.launcher/.ui.HomeActivity_vNext` |
+| priority 1000, mirrored category set + separate `MAIN_HOME` filter | `com.amazon.tv.launcher/.ui.HomeActivity_vNext` | `com.amazon.tv.launcher/.ui.HomeActivity_vNext` |
+
+Fire OS's activity manager routes home starts to the stock launcher regardless of filter priority or a stored preferred activity. The priority filters are kept for other Fire OS builds but are not the working route on 5.1.1.
+
+The working route is a **direct boot launch**: `HomeKeyReceiver` starts `HomeActivity` itself when it receives `BOOT_COMPLETED`, `QUICKBOOT_POWERON`, or `POST_BOOT_COMPLETED`, while the watcher keeps it in front afterwards. Verified by rebooting the AFTT:
+
+```text
+I/HomeKeyReceiver: start trigger (android.intent.action.BOOT_COMPLETED): home watcher started
+I/HomeKeyReceiver: boot launch of OBAA Home
+I/HomeKeyWatcherService: watching for Home (broadcast + usage stats)
+```
+
+```bash
+adb shell dumpsys activity activities | grep mResumedActivity
+# mResumedActivity: ... com.aurora.home/.HomeActivity
+```
+
 ## What Fire OS actually sends
 
 When Home is pressed, the system log shows `FireTVKeyPolicyManager` sending a protected broadcast:

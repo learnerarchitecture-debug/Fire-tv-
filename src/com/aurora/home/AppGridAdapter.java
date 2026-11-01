@@ -125,6 +125,10 @@ public class AppGridAdapter extends BaseAdapter {
         return mApps.get(position);
     }
 
+    public List<AppEntry> getApps() {
+        return new ArrayList<AppEntry>(mApps);
+    }
+
     @Override
     public int getCount() {
         return mApps.size();

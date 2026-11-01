@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.StateListDrawable;
+import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
@@ -61,6 +62,7 @@ public class HomeActivity extends Activity {
     private TextView mFooterLabel1, mFooterLabel2, mFooterLabel3;
     private TextView mDockStatus;
     private LinearLayout mDockAddApps;
+    private LinearLayout mDockUpdate;
     private IconView mDockAddIcon;
     private IconLoader mLoader;
     private final Handler mUi = new Handler();
@@ -132,6 +134,7 @@ public class HomeActivity extends Activity {
         mFooterLabel3 = (TextView) findViewById(R.id.footer_app3_label);
         mDockStatus = (TextView) findViewById(R.id.dock_status);
         mDockAddApps = (LinearLayout) findViewById(R.id.dock_add_apps);
+        if (mDockAddApps != null) {
         mDockAddIcon = (IconView) findViewById(R.id.dock_add_icon);
         if (mDockAddIcon != null) {
             mDockAddIcon.setMode(IconView.PLUS);
@@ -145,6 +148,20 @@ public class HomeActivity extends Activity {
                     overridePendingTransition(0, 0);
                 }
             });
+        }
+        }
+
+        mDockUpdate = (LinearLayout) findViewById(R.id.dock_update);
+        if (mDockUpdate != null) {
+            mDockUpdate.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    showUpdateDialog();
+                }
+            });
+        }
+        if (mDockUpdate != null) {
+            mDockUpdate.setVisibility(View.GONE);
         }
 
         mBrandIcon.setMode(IconView.AURORA);
@@ -219,7 +236,7 @@ public class HomeActivity extends Activity {
             }
         });
 
-        setupDockApps();
+        bindDockApps();
         loadRecommendations(true);
         if (Prefs.getBool(this, Prefs.K_AUTO_UPDATE, true)) {
             startAutoUpdateCheck();
@@ -346,19 +363,36 @@ public class HomeActivity extends Activity {
         }
     }
 
-    private void setupDockApps() {
+    private void bindDockApps() {
+        Set<String> custom = Prefs.homeDockPackages(this);
+        String[] slots = new String[3];
+        if (custom.size() == 3) {
+            int i = 0;
+            for (String pkg : custom) { slots[i++] = pkg; }
+        } else {
+            slots[0] = PKG_YOUTUBE; slots[1] = PKG_NETFLIX; slots[2] = PKG_PRIME;
+        }
         bindDockApp(mFooterApp1, mFooterIcon1, mFooterLabel1,
-                PKG_YOUTUBE, PKG_YOUTUBE_ALT,
+                slots[0], null,
                 new BrandIconDrawable(0xFFFF3B30, 0xFFB31217, "", BrandIconDrawable.PLAY),
-                "YouTube", Prefs.K_SHOW_YOUTUBE);
+                labelFor(slots[0]), Prefs.K_SHOW_YOUTUBE);
         bindDockApp(mFooterApp2, mFooterIcon2, mFooterLabel2,
-                PKG_NETFLIX, PKG_NETFLIX_ALT,
+                slots[1], null,
                 new BrandIconDrawable(0xFFE50914, 0xFF4A0508, "N", BrandIconDrawable.LETTER),
-                "Netflix", Prefs.K_SHOW_NETFLIX);
+                labelFor(slots[1]), Prefs.K_SHOW_NETFLIX);
         bindDockApp(mFooterApp3, mFooterIcon3, mFooterLabel3,
-                PKG_PRIME, null,
+                slots[2], null,
                 new BrandIconDrawable(0xFF1F8FFF, 0xFF0B3C7A, "P", BrandIconDrawable.LETTER),
-                "Prime Video", Prefs.K_SHOW_PRIME);
+                labelFor(slots[2]), Prefs.K_SHOW_PRIME);
+    }
+
+    private String labelFor(String pkg) {
+        if (PKG_YOUTUBE.equals(pkg) || PKG_YOUTUBE_ALT.equals(pkg)) return "YouTube";
+        if (PKG_NETFLIX.equals(pkg) || PKG_NETFLIX_ALT.equals(pkg)) return "Netflix";
+        if (PKG_PRIME.equals(pkg)) return "Prime Video";
+        try {
+            return getPackageManager().getApplicationLabel(getPackageManager().getApplicationInfo(pkg, 0)).toString();
+        } catch (Throwable t) { return pkg; }
     }
 
     private void bindDockApp(LinearLayout item, ImageView icon, TextView label,
@@ -658,6 +692,59 @@ public class HomeActivity extends Activity {
 
     private void openSettings() {
         startActivity(new Intent(this, SettingsActivity.class));
+    }
+
+    private void showUpdateDialog() {
+        UpdateChecker.check(this, new UpdateChecker.Callback() {
+            @Override
+            public void onResult(final UpdateChecker.Update update) {
+                mUi.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (update == null || !update.available) {
+                            dialogBuilder().setTitle("No updates").setMessage("OBAA Home is up to date.").setPositiveButton("OK", null).show();
+                            return;
+                        }
+                        dialogBuilder()
+                                .setTitle("Update found")
+                                .setMessage("A new build is ready: " + update.version + ".\n\nInstall now?")
+                                .setPositiveButton("Install now", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface d, int w) {
+                                        installUpdate(update);
+                                    }
+                                })
+                                .setNegativeButton("Later", null)
+                                .show();
+                    }
+                });
+            }
+            @Override
+            public void onError(String msg) {
+                toast("Couldn't check for updates");
+            }
+        });
+    }
+
+    private void installUpdate(UpdateChecker.Update update) {
+        if (update == null || update.file == null || !update.file.exists()) {
+            toast("Update file missing");
+            return;
+        }
+        try {
+            Intent intent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
+            intent.setData(Uri.fromFile(update.file));
+            intent.putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(intent);
+        } catch (Throwable t) {
+            try {
+                Intent view = new Intent(Intent.ACTION_VIEW);
+                view.setDataAndType(Uri.fromFile(update.file), "application/vnd.android.package-archive");
+                view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                startActivity(view);
+            } catch (Throwable t2) { toast("Couldn't open installer"); }
+        }
     }
 
     private void openAppDrawer() {

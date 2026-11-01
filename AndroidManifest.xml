@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.aurora.home"
-    android:versionCode="2"
+    android:versionCode="3"
     android:versionName="2.0">
 
     <uses-sdk android:minSdkVersion="22" android:targetSdkVersion="22"/>
@@ -43,10 +43,25 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
             </intent-filter>
-            <intent-filter>
+            <!-- Fire OS resolves the boot/home target with a home intent
+                 that also carries fireos.intent.category.MAIN_HOME plus
+                 LAUNCHER/MONKEY.  The stock launcher declares those in one
+                 filter at priority 950, so OBAA Home mirrors the exact
+                 category set at a higher priority to stay the default
+                 launcher across reboots.  Categories must stay together:
+                 a filter only matches when the intent carries every
+                 category declared here. -->
+            <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.HOME"/>
                 <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.HOME"/>
+                <category android:name="fireos.intent.category.MAIN_HOME"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+                <category android:name="android.intent.category.MONKEY"/>
+            </intent-filter>
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="fireos.intent.category.MAIN_HOME"/>
             </intent-filter>
         </activity>
 

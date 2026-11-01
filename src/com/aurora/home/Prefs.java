@@ -38,6 +38,7 @@ public final class Prefs {
     public static final String K_REC_LAST = "rec_last";
     public static final String K_REC_FORCE = "rec_force";
     public static final String K_AUTO_UPDATE = "auto_update";
+    public static final String K_HOME_DOCK = "home_dock";
 
     private Prefs() {}
 
@@ -199,5 +200,28 @@ public final class Prefs {
 
     public static boolean showDockApp(Context c, String key) {
         return getBool(c, key, true);
+    }
+
+    public static Set<String> homeDockPackages(Context c) {
+        Set<String> out = new HashSet<String>();
+        String raw = get(c, K_HOME_DOCK, "");
+        if (raw.length() == 0) return out;
+        String[] parts = raw.split(",");
+        for (String p : parts) if (p.length() > 0) out.add(p);
+        return out;
+    }
+
+    public static void putHomeDockPackages(Context c, Set<String> packages) {
+        StringBuilder sb = new StringBuilder();
+        for (String pkg : packages) {
+            if (pkg == null || pkg.length() == 0) continue;
+            if (sb.length() > 0) sb.append(',');
+            sb.append(pkg);
+        }
+        sp(c).edit().putString(K_HOME_DOCK, sb.toString()).apply();
+    }
+
+    public static void resetHomeDock(Context c) {
+        sp(c).edit().putString(K_HOME_DOCK, "").apply();
     }
 }

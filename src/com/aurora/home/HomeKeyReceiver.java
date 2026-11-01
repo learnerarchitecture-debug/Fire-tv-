@@ -27,6 +27,7 @@ public class HomeKeyReceiver extends BroadcastReceiver {
         if (isStartTrigger(action)) {
             HomeKeyWatcherService.ensureStarted(context);
             Log.i("HomeKeyReceiver", "start trigger (" + action + "): home watcher started");
+            if (isBootTrigger(action)) launchHome(context);
             return;
         }
 
@@ -85,6 +86,33 @@ public class HomeKeyReceiver extends BroadcastReceiver {
                 || "com.amazon.tv.networkmonitor.CONNECTIVITY_CHECK".equals(action)
                 || "amazon.intent.action.HOME_PRESSED".equals(action)
                 || "amazon.intent.action.HOME_DOUBLE_PRESSED".equals(action);
+    }
+
+    /**
+     * Fire OS starts the Amazon launcher during boot before any third-party
+     * HOME activity can win resolution.  Bringing OBAA Home forward as soon
+     * as the boot broadcast arrives hides that flash; the watcher keeps it
+     * in front afterwards.
+     */
+    private static boolean isBootTrigger(String action) {
+        return Intent.ACTION_BOOT_COMPLETED.equals(action)
+                || "android.intent.action.QUICKBOOT_POWERON".equals(action)
+                || "com.htc.intent.action.QUICKBOOT_POWERON".equals(action)
+                || "com.amazon.tv.networkmonitor.POST_BOOT_COMPLETED".equals(action);
+    }
+
+    private static void launchHome(Context context) {
+        try {
+            Intent home = new Intent(context, HomeActivity.class);
+            home.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+            context.startActivity(home);
+            Log.i("HomeKeyReceiver", "boot launch of OBAA Home");
+        } catch (Throwable t) {
+            Log.w("HomeKeyReceiver", "boot launch failed", t);
+        }
     }
 
     public static boolean isEnabled(Context context) {

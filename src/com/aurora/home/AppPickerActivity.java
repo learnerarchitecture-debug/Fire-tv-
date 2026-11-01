@@ -10,6 +10,7 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -195,6 +196,18 @@ public class AppPickerActivity extends Activity {
         } else {
             AppCatalog.save(this, mSelected);
         }
+        // Also allow direct home-dock customization: first 3 picked -> footer
+        Set<String> dock = new HashSet<String>();
+        int count = 0;
+        for (AppGridAdapter.AppEntry e : mAdapter.getApps()) {
+            if (mSelected.contains(e.pkg)) {
+                dock.add(e.pkg);
+                count++;
+                if (count >= 3) break;
+            }
+        }
+        if (dock.size() > 0) Prefs.putHomeDockPackages(this, dock);
+        else Prefs.resetHomeDock(this);
         setResult(RESULT_OK, new Intent());
         toast("App tray updated");
         finish();
