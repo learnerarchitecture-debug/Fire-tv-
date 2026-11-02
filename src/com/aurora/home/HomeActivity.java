@@ -58,6 +58,7 @@ public class HomeActivity extends Activity {
     private LinearLayout mDockUpdate;
     private IconView mDockAddIcon;
     private IconLoader mLoader;
+    private SwipeDeckView mDeck;
     private final Handler mUi = new Handler();
     private Runnable mTick;
     private Runnable mRotationTick;
@@ -150,6 +151,58 @@ public class HomeActivity extends Activity {
 
         mLoader = new IconLoader(this, 96);
         mSaved = Prefs.savedIds(this);
+        mDeck = (SwipeDeckView) findViewById(R.id.swipe_deck);
+        if (mDeck != null) {
+            mDeck.setSavedIds(mSaved);
+            mDeck.setAccent(Prefs.accent(this));
+            mDeck.setAnimationsEnabled(!Prefs.reduceMotion(this));
+            mDeck.setListener(new SwipeDeckView.Listener() {
+                @Override
+                public void onSwiped(Movie movie, boolean saved) {
+                    if (saved) {
+                        if (mSaved.add(movie.id)) {
+                            Prefs.putSavedIds(HomeActivity.this, mSaved);
+                            if (mDeck != null) mDeck.setSavedIds(mSaved);
+                            toast("Saved to watchlist");
+                        } else {
+                            toast("Already in your watchlist");
+                        }
+                    } else {
+                        toast("Passed");
+                    }
+                }
+
+                @Override
+                public void onUndo(Movie movie, boolean wasSaved) {
+                    if (wasSaved && movie != null && mSaved.remove(movie.id)) {
+                        Prefs.putSavedIds(HomeActivity.this, mSaved);
+                        if (mDeck != null) mDeck.setSavedIds(mSaved);
+                        updateFeaturedSave();
+                    }
+                }
+
+                @Override
+                public void onDeckChanged(int position, int total, boolean canUndo) {
+                    TextView count = (TextView) findViewById(R.id.deck_count);
+                    if (count != null) count.setText((position + 1) + " / " + total);
+                    View undo = findViewById(R.id.deck_undo);
+                    if (undo != null) {
+                        undo.setEnabled(canUndo);
+                        undo.setFocusable(canUndo);
+                        undo.setClickable(canUndo);
+                        undo.setAlpha(canUndo ? 1f : 0.35f);
+                    }
+                }
+
+                @Override
+                public void onOpen(Movie movie) {
+                    if (movie != null) {
+                        setFeatured(movie, false);
+                        showMovieDetails(movie);
+                    }
+                }
+            });
+        }
         bindHomeApps();
         loadRecommendations(true);
         if (Prefs.getBool(this, Prefs.K_AUTO_UPDATE, true)) {
@@ -196,6 +249,25 @@ public class HomeActivity extends Activity {
                 }
             }
         });
+        // Deck action buttons (right-side swipe card panel)
+        click(R.id.deck_undo, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mDeck != null) mDeck.undo();
+            }
+        });
+        click(R.id.deck_pass, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mDeck != null) mDeck.swipeLeft();
+            }
+        });
+        click(R.id.deck_save, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mDeck != null) mDeck.swipeRight();
+            }
+        });
         applyTheme();
         updateClock();
         updateDockStatus();
@@ -232,13 +304,102 @@ public class HomeActivity extends Activity {
         mRotation = rotation;
         mProviderSignature = signature;
         mRecommendations = Recommendations.build(this, rotation);
+        if (mDeck != null) mDeck.setMovies(mRecommendations);
         if (!mRecommendations.isEmpty()) {
             setFeatured(mRecommendations.get(0), false);
         }
     }
 
     private void bindHomeApps() {
-        // Home dock apps bound via layout; picker saves to Prefs.K_HOME_DOCK.
+        LinearLayout row = (LinearLayout) findViewById(R.id.home_apps_row);
+        if (row == null) return;
+        row.removeAllViews();
+        List<String> pkgs = homeAppPackages();
+        for (final String pkg : pkgs) {
+            View cell = getLayoutInflater().inflate(R.layout.item_home_app, row, false);
+            cell.setLayoutParams(new LinearLayout.LayoutParams((int) Ui.dp(this, 108),
+                    LinearLayout.LayoutParams.WRAP_CONTENT));
+            ImageView icon = (ImageView) cell.findViewById(R.id.home_app_icon);
+            TextView label = (TextView) cell.findViewById(R.id.home_app_label);
+            if (label != null) {
+                label.setText(loadLabel(pkg));
+                label.setTextColor(0xFFA5ADBE);
+            }
+            if (icon != null) {
+                RoundedIconDrawable rd = new RoundedIconDrawable(Ui.dp(this, 14));
+                icon.setImageDrawable(rd);
+                icon.setTag(pkg);
+                mLoader.queue(pkg, icon);
+            }
+            cell.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    launchPackage(pkg, loadLabel(pkg));
+                }
+            });
+            row.addView(cell);
+        }
+        // Add-apps tile (Apple TV style "+")
+        View add = getLayoutInflater().inflate(R.layout.item_home_app, row, false);
+        add.setLayoutParams(new LinearLayout.LayoutParams((int) Ui.dp(this, 108),
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        ImageView addIcon = (ImageView) add.findViewById(R.id.home_app_icon);
+        TextView addLabel = (TextView) add.findViewById(R.id.home_app_label);
+        if (addIcon != null) addIcon.setImageBitmap(plusIcon());
+        if (addLabel != null) {
+            addLabel.setText("Add apps");
+            addLabel.setTextColor(0xFF6E788C);
+        }
+        add.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent i = new Intent(HomeActivity.this, AppPickerActivity.class);
+                i.putExtra(AppPickerActivity.EXTRA_MODE, AppPickerActivity.MODE_HOME);
+                startActivity(i);
+            }
+        });
+        row.addView(add);
+        View spacer = new View(this);
+        spacer.setLayoutParams(new LinearLayout.LayoutParams(0, 1, 1f));
+        row.addView(spacer);
+    }
+
+    private List<String> homeAppPackages() {
+        List<String> out = new ArrayList<String>();
+        String raw = Prefs.get(this, Prefs.K_HOME_DOCK, "");
+        if (raw != null && raw.length() > 0) {
+            for (String p : raw.split(",")) {
+                String t = p.trim();
+                if (t.length() > 0 && isInstalled(t) && !out.contains(t)) out.add(t);
+            }
+        }
+        if (out.isEmpty()) {
+            String[] preferred = {
+                    "com.amazon.firetv.youtube", "com.google.android.youtube",
+                    "com.netflix.mediaclient", "com.netflix.ninja",
+                    "com.amazon.avod", "com.spotify.tv.android",
+                    "com.plexapp.android", "com.disney.disneyplus"
+            };
+            for (String p : preferred) {
+                if (isInstalled(p) && !out.contains(p)) out.add(p);
+            }
+        }
+        if (out.size() > 6) out = new ArrayList<String>(out.subList(0, 6));
+        return out;
+    }
+
+    private android.graphics.Bitmap plusIcon() {
+        int s = (int) Ui.dp(this, 40);
+        android.graphics.Bitmap bmp = android.graphics.Bitmap.createBitmap(s, s,
+                android.graphics.Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas c = new android.graphics.Canvas(bmp);
+        android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        p.setColor(0xFFB8C0D0);
+        p.setStrokeWidth(s * 0.10f);
+        p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+        c.drawLine(s * 0.30f, s * 0.50f, s * 0.70f, s * 0.50f, p);
+        c.drawLine(s * 0.50f, s * 0.30f, s * 0.50f, s * 0.70f, p);
+        return bmp;
     }
 
     private String loadLabel(String pkg) {
@@ -259,6 +420,7 @@ public class HomeActivity extends Activity {
         sResumed = true;
         Ui.immersive(this);
         mSaved = Prefs.savedIds(this);
+        if (mDeck != null) mDeck.setSavedIds(mSaved);
         loadRecommendations(false);
         applyTheme();
         updateClock();
@@ -310,6 +472,10 @@ public class HomeActivity extends Activity {
         if (mHeroPlay != null) mHeroPlay.setBackgroundDrawable(primaryButtonBackground());
         if (mWeatherChip != null) mWeatherChip.setVisibility(Prefs.showWeather(this) ? View.VISIBLE : View.GONE);
         if (mRoot != null) Ui.applyGlassAlpha(mRoot, Prefs.glassPercent(this));
+        if (mDeck != null) {
+            mDeck.setAccent(mAccent);
+            mDeck.setAnimationsEnabled(!Prefs.reduceMotion(this));
+        }
         updateFeaturedSave();
     }
 
@@ -377,6 +543,7 @@ public class HomeActivity extends Activity {
             saved = true;
         }
         Prefs.putSavedIds(this, mSaved);
+        if (mDeck != null) mDeck.setSavedIds(mSaved);
         updateFeaturedSave();
         return saved;
     }

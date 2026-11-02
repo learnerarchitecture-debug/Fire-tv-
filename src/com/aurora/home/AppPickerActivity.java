@@ -196,25 +196,27 @@ public class AppPickerActivity extends Activity {
     }
 
     private void save() {
+        if (mMode == MODE_HOME) {
+            StringBuilder sb = new StringBuilder();
+            int count = 0;
+            for (AppGridAdapter.AppEntry e : mAdapter.getApps()) {
+                if (mSelected.contains(e.pkg)) {
+                    if (sb.length() > 0) sb.append(',');
+                    sb.append(e.pkg);
+                    if (++count >= 6) break;
+                }
+            }
+            Prefs.put(this, Prefs.K_HOME_DOCK, sb.toString());
+            setResult(RESULT_OK, new Intent());
+            toast("Home apps updated");
+            finish();
+            return;
+        }
         Set<String> defaults = AppCatalog.defaultPackages(this);
         if (mSelected.equals(defaults)) {
             AppCatalog.reset(this);
         } else {
             AppCatalog.save(this, mSelected);
-        }
-        if (mMode == MODE_HOME) {
-            Set<String> dock = new HashSet<String>();
-            int count = 0;
-            for (AppGridAdapter.AppEntry e : mAdapter.getApps()) {
-                if (mSelected.contains(e.pkg)) {
-                    dock.add(e.pkg);
-                    count++;
-                    if (count >= 3) break;
-                }
-            }
-            String val = "";
-            for (String s : dock) val += (val.isEmpty() ? "" : ",") + s;
-            Prefs.put(this, Prefs.K_HOME_DOCK, val);
         }
         setResult(RESULT_OK, new Intent());
         toast("App tray updated");
