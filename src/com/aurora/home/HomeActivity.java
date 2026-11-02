@@ -107,23 +107,25 @@ public class HomeActivity extends Activity {
         mSaveIcon = (IconView) findViewById(R.id.save_icon);
         mSettingsIcon = (IconView) findViewById(R.id.settings_icon);
         mBrandIcon = (IconView) findViewById(R.id.brand_icon);
+        mDockSettingsIcon = (IconView) findViewById(R.id.dock_settings_icon);
+        mDockAppsIcon = (IconView) findViewById(R.id.dock_apps_icon);
         mDockStatus = (TextView) findViewById(R.id.dock_status);
         mDockAddApps = (LinearLayout) findViewById(R.id.dock_add_apps);
         if (mDockAddApps != null) {
-        mDockAddIcon = (IconView) findViewById(R.id.dock_add_icon);
-        if (mDockAddIcon != null) {
-            mDockAddIcon.setMode(IconView.PLUS);
-            mDockAddIcon.setColor(Prefs.accent(this), 0);
-        }
-        if (mDockAddApps != null) {
+            mDockAddIcon = (IconView) findViewById(R.id.dock_add_icon);
+            if (mDockAddIcon != null) {
+                mDockAddIcon.setMode(IconView.PLUS);
+                mDockAddIcon.setColor(Prefs.accent(this), 0);
+            }
             mDockAddApps.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    startActivity(new Intent(HomeActivity.this, AppPickerActivity.class));
+                    Intent i = new Intent(HomeActivity.this, AppPickerActivity.class);
+                    i.putExtra(AppPickerActivity.EXTRA_MODE, AppPickerActivity.MODE_HOME);
+                    startActivity(i);
                     overridePendingTransition(0, 0);
                 }
             });
-        }
         }
 
         mDockUpdate = (LinearLayout) findViewById(R.id.dock_update);
@@ -139,21 +141,12 @@ public class HomeActivity extends Activity {
             mDockUpdate.setVisibility(View.GONE);
         }
 
-        mBrandIcon.setMode(IconView.AURORA);
-        mBrandIcon.setColor(0xFFFFFFFF, 0);
-        mPlayIcon.setMode(IconView.PLAY);
-        mPlayIcon.setColor(0xFF12151C, 0);
-        mSaveIcon.setMode(IconView.HEART);
-        mSaveIcon.setColor(0xFFFFFFFF, 0);
-        mBrandIcon.setMode(IconView.AURORA);
-        mBrandIcon.setColor(0xFFFFFFFF, 0);
-        mPlayIcon.setMode(IconView.PLAY);
-        mPlayIcon.setColor(0xFF12151C, 0);
-        mSaveIcon.setMode(IconView.HEART);
-        mSaveIcon.setColor(0xFFFFFFFF, 0);
-        mDockSettingsIcon.setMode(IconView.GEAR);
-        mDockAppsIcon.setMode(IconView.APPS);
-        mSettingsIcon.setMode(IconView.GEAR);
+        icon(mBrandIcon, IconView.AURORA, 0xFFFFFFFF);
+        icon(mPlayIcon, IconView.PLAY, 0xFF12151C);
+        icon(mSaveIcon, IconView.HEART, 0xFFFFFFFF);
+        icon(mDockSettingsIcon, IconView.GEAR, 0);
+        icon(mDockAppsIcon, IconView.APPS, 0);
+        icon(mSettingsIcon, IconView.GEAR, 0);
 
         mLoader = new IconLoader(this, 96);
         mSaved = Prefs.savedIds(this);
@@ -169,24 +162,24 @@ public class HomeActivity extends Activity {
                 openSettings();
             }
         };
-        findViewById(R.id.settings_btn).setOnClickListener(openSettings);
-        findViewById(R.id.dock_settings).setOnClickListener(openSettings);
-        findViewById(R.id.dock_apps).setOnClickListener(new View.OnClickListener() {
+        click(R.id.settings_btn, openSettings);
+        click(R.id.dock_settings, openSettings);
+        click(R.id.dock_apps, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 openAppDrawer();
             }
         });
-        findViewById(R.id.avatar).setOnClickListener(openSettings);
-        mWeatherChip.setOnClickListener(openSettings);
+        click(R.id.avatar, openSettings);
+        if (mWeatherChip != null) mWeatherChip.setOnClickListener(openSettings);
 
-        mHeroPlay.setOnClickListener(new View.OnClickListener() {
+        if (mHeroPlay != null) mHeroPlay.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (mFeatured != null) showMovieDetails(mFeatured);
             }
         });
-        mHeroSave.setOnClickListener(new View.OnClickListener() {
+        if (mHeroSave != null) mHeroSave.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (mFeatured == null) return;
@@ -195,7 +188,7 @@ public class HomeActivity extends Activity {
             }
         });
         // Hero next recommendation
-        findViewById(R.id.hero_next).setOnClickListener(new View.OnClickListener() {
+        click(R.id.hero_next, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (mRecommendations.size() > 1) {
@@ -277,11 +270,11 @@ public class HomeActivity extends Activity {
         maybeRefreshWeather();
         if (mFirstResume) {
             mFirstResume = false;
-            mHeroPlay.requestFocus();
+            if (mHeroPlay != null) mHeroPlay.requestFocus();
         } else {
             View focus = getCurrentFocus();
             if (focus == null || !focus.isShown()) {
-                mHeroPlay.requestFocus();
+                if (mHeroPlay != null) mHeroPlay.requestFocus();
             }
         }
     }
@@ -309,14 +302,14 @@ public class HomeActivity extends Activity {
     private void applyTheme() {
         String theme = Prefs.theme(this);
         mAccent = Prefs.accent(this);
-        mBg.setTheme(theme, mAccent);
-        mSettingsIcon.setColor(mAccent, 0);
-        mDockSettingsIcon.setColor(mAccent, 0);
-        mDockAppsIcon.setColor(mAccent, 0);
-        mHeroEyebrow.setTextColor(mAccent);
-        mHeroPlay.setBackgroundDrawable(primaryButtonBackground());
-        mWeatherChip.setVisibility(Prefs.showWeather(this) ? View.VISIBLE : View.GONE);
-        Ui.applyGlassAlpha(mRoot, Prefs.glassPercent(this));
+        if (mBg != null) mBg.setTheme(theme, mAccent);
+        if (mSettingsIcon != null) mSettingsIcon.setColor(mAccent, 0);
+        if (mDockSettingsIcon != null) mDockSettingsIcon.setColor(mAccent, 0);
+        if (mDockAppsIcon != null) mDockAppsIcon.setColor(mAccent, 0);
+        if (mHeroEyebrow != null) mHeroEyebrow.setTextColor(mAccent);
+        if (mHeroPlay != null) mHeroPlay.setBackgroundDrawable(primaryButtonBackground());
+        if (mWeatherChip != null) mWeatherChip.setVisibility(Prefs.showWeather(this) ? View.VISIBLE : View.GONE);
+        if (mRoot != null) Ui.applyGlassAlpha(mRoot, Prefs.glassPercent(this));
         updateFeaturedSave();
     }
 
@@ -647,6 +640,18 @@ public class HomeActivity extends Activity {
 
     private void toast(String text) {
         Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
+    }
+
+    /** Safe click binding: missing views never crash the home screen. */
+    private void click(int id, View.OnClickListener l) {
+        View v = findViewById(id);
+        if (v != null) v.setOnClickListener(l);
+    }
+
+    private void icon(IconView v, int mode, int color) {
+        if (v == null) return;
+        v.setMode(mode);
+        if (color != 0) v.setColor(color, 0);
     }
 
     @Override
