@@ -128,7 +128,6 @@ public final class ThumbnailLoader {
     private static Bitmap fetch(Context app, Movie m) {
         Bitmap disk = fromDisk(app, m.id);
         if (disk != null) return disk;
-
         String title = clean(m.title);
         String year = m.year == null ? "" : m.year.trim();
         String[][] attempts = {
@@ -136,7 +135,6 @@ public final class ThumbnailLoader {
                 {"US", "tvShow", title + " " + year},
                 {"IN", "movie", title + " " + year},
                 {"US", "movie", title + " " + year},
-                {"US", "all", title},
         };
         for (String[] a : attempts) {
             try {
@@ -273,7 +271,8 @@ public final class ThumbnailLoader {
 
     private static Bitmap fromDisk(Context c, String id) {
         try {
-            File f = new File(cacheDir(c), id + ".jpg");
+            // "_v2" suffix invalidates art cached by the old (album-permitting) matcher.
+            File f = new File(cacheDir(c), id + "_v2.jpg");
             if (!f.exists() || f.length() < 1000) return null;
             BitmapFactory.Options o = new BitmapFactory.Options();
             o.inJustDecodeBounds = true;
@@ -295,7 +294,7 @@ public final class ThumbnailLoader {
             File dir = cacheDir(c);
             if (dir == null) return;
             dir.mkdirs();
-            File f = new File(dir, id + ".jpg");
+            File f = new File(dir, id + "_v2.jpg");
             out = new FileOutputStream(f);
             b.compress(Bitmap.CompressFormat.JPEG, 86, out);
             out.flush();
