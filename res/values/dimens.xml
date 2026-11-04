@@ -5,8 +5,8 @@
     <dimen name="screen_top">18dp</dimen>
     <dimen name="screen_bottom">16dp</dimen>
     <dimen name="topbar_h">46dp</dimen>
-    <dimen name="main_h">214dp</dimen>
-    <dimen name="swipe_w">322dp</dimen>
+    <dimen name="main_h">232dp</dimen>
+    <dimen name="swipe_w">356dp</dimen>
     <dimen name="main_gap">14dp</dimen>
     <dimen name="rail_h">82dp</dimen>
     <dimen name="dock_h">48dp</dimen>

@@ -32,6 +32,13 @@ public final class Prefs {
     /** App tray customisation. Empty/absent means "show every launchable app". */
     public static final String K_DRAWER_CUSTOM = "drawer_custom";
     public static final String K_DRAWER_APPS = "drawer_apps";
+    /** Preferred fallback apps for the home screen dock. */
+    public static final String[] PREFERRED_HOME_APPS = {
+            "com.amazon.firetv.youtube", "com.google.android.youtube",
+            "com.netflix.mediaclient", "com.netflix.ninja",
+            "com.amazon.avod", "com.spotify.tv.android",
+            "com.plexapp.android", "com.disney.disneyplus"
+    };
     /** Recommendation rotation controls. */
     public static final String K_REC_AUTO = "rec_auto";
     public static final String K_REC_ROTATION = "rec_rotation";
@@ -223,5 +230,21 @@ public final class Prefs {
 
     public static void resetHomeDock(Context c) {
         sp(c).edit().putString(K_HOME_DOCK, "").apply();
+    }
+
+    /** Installed packages among the preferred home dock apps. */
+    public static Set<String> defaultHomeDockApps(Context c) {
+        Set<String> out = new HashSet<String>();
+        if (c == null) return out;
+        android.content.pm.PackageManager pm = c.getPackageManager();
+        for (String pkg : PREFERRED_HOME_APPS) {
+            try {
+                pm.getPackageInfo(pkg, 0);
+                out.add(pkg);
+            } catch (Exception ignored) {
+                // not installed
+            }
+        }
+        return out;
     }
 }

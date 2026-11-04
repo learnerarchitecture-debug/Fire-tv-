@@ -37,6 +37,7 @@ public class MovieCardView extends View {
     public void setMovie(Movie m) {
         if (m == null) return;
         mMovie = m;
+        ThumbnailLoader.load(getContext(), m, this);
         invalidate();
     }
 
@@ -74,8 +75,10 @@ public class MovieCardView extends View {
             mPaint.setShader(null);
             mPaint.setStyle(Paint.Style.FILL);
             mPaint.setAntiAlias(true);
-            // Thumbnail replaces procedural art when present
-            c.drawBitmap(mMovie.thumbnail, null, mRect, mPaint);
+            // Cover-cropped thumbnail replaces procedural art when present
+            Rect src = ThumbnailLoader.coverSrc(mRect.width(), mRect.height(),
+                    mMovie.thumbnail.getWidth(), mMovie.thumbnail.getHeight());
+            c.drawBitmap(mMovie.thumbnail, src, mRect, mPaint);
         } else {
             MovieArt.drawPoster(c, mRect, mMovie, radius, mPaint);
         }

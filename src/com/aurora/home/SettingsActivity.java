@@ -1497,6 +1497,12 @@ public class SettingsActivity extends Activity {
                                 showPane(mPane, true);
                             }
                         })
+                .setNeutralButton("Set as default launcher", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        tryOpen(Settings.ACTION_HOME_SETTINGS, "android.settings.HOME_SETTINGS");
+                    }
+                })
                 .setNegativeButton("Close", null)
                 .show();
     }

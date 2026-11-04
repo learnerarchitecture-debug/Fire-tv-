@@ -3,6 +3,7 @@ package com.aurora.home;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
@@ -25,6 +26,7 @@ public class PosterArtView extends View {
     public void setMovie(Movie m) {
         if (m == null) return;
         mMovie = m;
+        ThumbnailLoader.load(getContext(), m, this);
         invalidate();
     }
 
@@ -37,7 +39,9 @@ public class PosterArtView extends View {
             mPaint.setShader(null);
             mPaint.setStyle(Paint.Style.FILL);
             mPaint.setAntiAlias(true);
-            c.drawBitmap(mMovie.thumbnail, null, mRect, mPaint);
+            Rect src = ThumbnailLoader.coverSrc(mRect.width(), mRect.height(),
+                    mMovie.thumbnail.getWidth(), mMovie.thumbnail.getHeight());
+            c.drawBitmap(mMovie.thumbnail, src, mRect, mPaint);
         } else {
             MovieArt.drawPoster(c, mRect, mMovie, radius, mPaint);
         }

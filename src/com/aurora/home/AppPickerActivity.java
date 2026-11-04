@@ -52,7 +52,23 @@ public class AppPickerActivity extends Activity {
         mEmpty = findViewById(R.id.picker_empty);
         mSave = findViewById(R.id.picker_save);
         mReset = findViewById(R.id.picker_reset);
-        mSelected = AppCatalog.visiblePackages(this);
+        // MODE_HOME works on the home-screen dock only: the preselection is the
+        // current dock, not the drawer tray, so the two stores never cross over.
+        mSelected = mMode == MODE_HOME
+                ? Prefs.homeDockPackages(this)
+                : AppCatalog.visiblePackages(this);
+        if (mMode == MODE_HOME && mSelected.isEmpty()) {
+            mSelected = Prefs.defaultHomeDockApps(this);
+        }
+
+        TextView title = (TextView) findViewById(R.id.picker_title);
+        TextView lead = (TextView) findViewById(R.id.picker_lead);
+        if (title != null) title.setText(R.string.picker_title);
+        if (lead != null) {
+            lead.setText(mMode == MODE_HOME
+                    ? R.string.picker_lead_home
+                    : R.string.picker_lead);
+        }
 
         IconView close = (IconView) findViewById(R.id.picker_close_icon);
         close.setMode(IconView.CLOSE);
@@ -70,6 +86,13 @@ public class AppPickerActivity extends Activity {
         mReset.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (mMode == MODE_HOME) {
+                    mSelected = Prefs.defaultHomeDockApps(AppPickerActivity.this);
+                    mAdapter.setSelected(mSelected);
+                    updateCount();
+                    toast("Default home apps restored — press Save to apply");
+                    return;
+                }
                 mSelected = AppCatalog.defaultPackages(AppPickerActivity.this);
                 mAdapter.setSelected(mSelected);
                 updateCount();
@@ -192,7 +215,9 @@ public class AppPickerActivity extends Activity {
     }
 
     private void updateCount() {
-        mCount.setText(mSelected.size() + " selected");
+        mCount.setText(mMode == MODE_HOME
+                ? mSelected.size() + " for home"
+                : mSelected.size() + " selected");
     }
 
     private void save() {
@@ -203,12 +228,12 @@ public class AppPickerActivity extends Activity {
                 if (mSelected.contains(e.pkg)) {
                     if (sb.length() > 0) sb.append(',');
                     sb.append(e.pkg);
-                    if (++count >= 6) break;
+                    if (++count >= 8) break;
                 }
             }
             Prefs.put(this, Prefs.K_HOME_DOCK, sb.toString());
             setResult(RESULT_OK, new Intent());
-            toast("Home apps updated");
+            toast("Home screen updated — added to your home apps");
             finish();
             return;
         }

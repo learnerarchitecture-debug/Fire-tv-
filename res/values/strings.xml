@@ -43,12 +43,14 @@
     <string name="for_you">FOR YOU</string>
     <string name="find_next">Find your next obsession</string>
     <string name="apps">Apps</string>
+    <string name="all_apps">All apps</string>
     <string name="apps_lead">Installed &amp; main apps</string>
     <string name="apps_empty">No installed apps found</string>
     <string name="apps_hint">BACK TO CLOSE</string>
     <string name="add_apps">Add apps</string>
     <string name="picker_title">Add apps</string>
     <string name="picker_lead">Choose apps for your tray</string>
+    <string name="picker_lead_home">Pick apps for your home screen</string>
     <string name="picker_empty">No launchable apps found</string>
     <string name="picker_save">Save</string>
     <string name="picker_reset">Reset</string>

@@ -44,12 +44,8 @@ public final class Movie {
         this.c3 = c3;
         this.providerName = providerName == null ? "" : providerName;
         this.providerPkg = providerPkg == null ? "" : providerPkg;
-        // Load poster thumbnail (OTT artwork). If present, use it.
-        try {
-            String query = title.replace(' ', '+') + "+" + (year.isEmpty() ? "" : year);
-            android.graphics.Bitmap thumb = ThumbnailLoader.load(null, query, (year.isEmpty() ? 0 : Integer.parseInt(year)));
-            if (thumb != null && !thumb.isRecycled()) this.thumbnail = thumb;
-        } catch (Throwable ignored) {}
+        // Real artwork is fetched asynchronously from the views via
+        // ThumbnailLoader.load(...); the procedural poster is the fallback.
     }
 
     public String meta() {

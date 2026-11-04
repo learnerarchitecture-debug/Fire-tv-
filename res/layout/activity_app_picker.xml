@@ -45,6 +45,7 @@
                 android:orientation="vertical">
 
                 <TextView
+                    android:id="@+id/picker_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/picker_title"
@@ -55,6 +56,7 @@
                     android:includeFontPadding="false"/>
 
                 <TextView
+                    android:id="@+id/picker_lead"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"

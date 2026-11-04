@@ -374,17 +374,11 @@ public class HomeActivity extends Activity {
             }
         }
         if (out.isEmpty()) {
-            String[] preferred = {
-                    "com.amazon.firetv.youtube", "com.google.android.youtube",
-                    "com.netflix.mediaclient", "com.netflix.ninja",
-                    "com.amazon.avod", "com.spotify.tv.android",
-                    "com.plexapp.android", "com.disney.disneyplus"
-            };
-            for (String p : preferred) {
+            for (String p : Prefs.PREFERRED_HOME_APPS) {
                 if (isInstalled(p) && !out.contains(p)) out.add(p);
             }
         }
-        if (out.size() > 6) out = new ArrayList<String>(out.subList(0, 6));
+        if (out.size() > 8) out = new ArrayList<String>(out.subList(0, 8));
         return out;
     }
 

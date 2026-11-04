@@ -110,6 +110,9 @@ public class SwipeDeckView extends View {
         }
         mDeck = new ArrayList<Movie>();
         if (movies != null) mDeck.addAll(movies);
+        for (Movie m : mDeck) {
+            ThumbnailLoader.load(getContext(), m, this);
+        }
         mHistory.clear();
         mIndex = 0;
         mDragX = 0f;
@@ -172,8 +175,8 @@ public class SwipeDeckView extends View {
         float w = getWidth(), h = getHeight();
         if (w <= 0 || h <= 0 || mDeck.isEmpty()) return;
 
-        float cardW = Math.min(w * 0.54f, Ui.dp(getContext(), 160));
-        float cardH = Math.min(h - Ui.dp(getContext(), 4), Ui.dp(getContext(), 170));
+        float cardW = Math.min(w * 0.82f, Ui.dp(getContext(), 200));
+        float cardH = Math.min(h - Ui.dp(getContext(), 4), Ui.dp(getContext(), 186));
         float left = (w - cardW) / 2f;
         float top = (h - cardH) / 2f + Ui.dp(getContext(), 2);
         mBase.set(left, top, left + cardW, top + cardH);
@@ -216,7 +219,9 @@ public class SwipeDeckView extends View {
             mPaint.setShader(null);
             mPaint.setStyle(Paint.Style.FILL);
             mPaint.setAntiAlias(true);
-            c.drawBitmap(m.thumbnail, null, r, mPaint);
+            android.graphics.Rect src = ThumbnailLoader.coverSrc(r.width(), r.height(),
+                    m.thumbnail.getWidth(), m.thumbnail.getHeight());
+            c.drawBitmap(m.thumbnail, src, r, mPaint);
         } else {
             MovieArt.drawPoster(c, r, m, radius, mPaint);
         }
