@@ -145,14 +145,14 @@ public final class Recommendations {
 
         provider("youtube", "YouTube", 0xFFFF0000, 0xFF260000, 0xFFFF7A7A,
                 new String[]{"com.amazon.firetv.youtube", "com.google.android.youtube.tv", "com.google.android.youtube"},
-                t("trending", "Trending Now", "2026", "Viral · Music", "24/7",
-                        "9.1", 97, "The videos, songs and moments everyone is watching right now.", "TRENDING"),
-                t("mkbhd", "The Future of TV", "2026", "Tech · Review", "18m",
-                        "8.9", 95, "A close look at the displays, chips and ideas shaping the next generation of television.", "TECH"),
-                t("kurzgesagt", "The Universe, Explained", "2026", "Science · Animation", "12m",
-                        "9.0", 96, "A beautifully animated journey through the biggest questions in astrophysics.", "SCIENCE"),
-                t("cricket", "Live: Cricket Highlights", "2026", "Sport · Live", "45m",
-                        "8.6", 92, "Every six, wicket and turning point from the latest match.", "LIVE"));
+                t("nightofliving", "Night of the Living Dead", "1968", "Horror · Classic", "1h 36m",
+                        "7.8", 92, "Seven strangers barricade a farmhouse while the recently dead walk the countryside.", "FREE CLASSIC"),
+                t("charade", "Charade", "1963", "Mystery · Comedy", "1h 53m",
+                        "7.9", 91, "A widow in Paris learns her late husband's fortune belonged to someone else — and three men want it.", "FREE CLASSIC"),
+                t("hisgirlfriday", "His Girl Friday", "1940", "Comedy · Classic", "1h 32m",
+                        "7.8", 90, "A fast-talking editor schemes to keep his star reporter ex-wife from remarrying.", "FREE CLASSIC"),
+                t("thekid", "The Kid", "1921", "Comedy · Classic", "1h 8m",
+                        "8.2", 93, "A tramp raises an abandoned child in a story of gruff tenderness and heartbreak.", "FREE CLASSIC"));
 
         provider("mx", "MX Player", 0xFFFF7A00, 0xFF2A1000, 0xFFFFC46B,
                 new String[]{"com.mxtech.videoplayer.ad"},

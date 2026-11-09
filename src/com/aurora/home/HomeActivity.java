@@ -72,6 +72,19 @@ public class HomeActivity extends Activity {
     private int mAccent = 0xFFFFB45E;
     private boolean mFirstResume = true;
     private static volatile boolean sResumed;
+    private LinearLayout mShell;
+    private LinearLayout mHeroResume;
+    private TextView mHeroResumeLabel;
+    private IconView mResumeIcon;
+    private int mContentAccent = 0;
+    // Ambient screensaver state
+    private boolean mSaver;
+    private int mSaverIndex;
+    private Movie mSaverFeatured;
+    private Runnable mIdleCheck;
+    private Runnable mSaverCycle;
+    private static final long IDLE_TO_SAVER_MS = 10L * 60L * 1000L;
+    private static final long SAVER_CYCLE_MS = 18000L;
 
     /** Used by the Home watcher to avoid a duplicate launch when OBAA is already visible. */
     public static boolean isResumed() {
@@ -106,6 +119,27 @@ public class HomeActivity extends Activity {
         mHeroSaveLabel = (TextView) findViewById(R.id.hero_save_label);
         mHeroPlay = (LinearLayout) findViewById(R.id.hero_play);
         mHeroSave = (LinearLayout) findViewById(R.id.hero_save);
+        mShell = (LinearLayout) findViewById(R.id.shell);
+        mHeroResume = (LinearLayout) findViewById(R.id.hero_resume);
+        mHeroResumeLabel = (TextView) findViewById(R.id.hero_resume_label);
+        mResumeIcon = (IconView) findViewById(R.id.hero_resume_icon);
+        if (mResumeIcon != null) {
+            mResumeIcon.setMode(IconView.PLAY);
+            mResumeIcon.setColor(mAccent, 0);
+        }
+        if (mHeroResume != null) {
+            mHeroResume.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    String pkg = Prefs.lastPackage(HomeActivity.this);
+                    if (pkg.length() > 0) {
+                        launchPackage(pkg, Prefs.lastLabel(HomeActivity.this));
+                    } else {
+                        toast("Nothing to resume yet");
+                    }
+                }
+            });
+        }
         mPlayIcon = (IconView) findViewById(R.id.play_icon);
         mSaveIcon = (IconView) findViewById(R.id.save_icon);
         mSettingsIcon = (IconView) findViewById(R.id.settings_icon);
@@ -195,6 +229,14 @@ public class HomeActivity extends Activity {
 
                 @Override
                 public void onDownEdge() {
+                    View shelf = findViewById(R.id.saved_shelf);
+                    if (shelf != null && shelf.isShown()) {
+                        LinearLayout tiles = (LinearLayout) findViewById(R.id.saved_tiles);
+                        if (tiles != null && tiles.getChildCount() > 0) {
+                            tiles.getChildAt(0).requestFocus();
+                            return;
+                        }
+                    }
                     LinearLayout row = (LinearLayout) findViewById(R.id.home_apps_row);
                     if (row != null && row.getChildCount() > 0) {
                         row.getChildAt(0).requestFocus();
@@ -208,6 +250,7 @@ public class HomeActivity extends Activity {
                         if (mSaved.add(movie.id)) {
                             Prefs.putSavedIds(HomeActivity.this, mSaved);
                             if (mDeck != null) mDeck.setSavedIds(mSaved);
+                            refreshSavedShelf();
                             toast("Saved to watchlist");
                         } else {
                             toast("Already in your watchlist");
@@ -222,6 +265,7 @@ public class HomeActivity extends Activity {
                     if (wasSaved && movie != null && mSaved.remove(movie.id)) {
                         Prefs.putSavedIds(HomeActivity.this, mSaved);
                         if (mDeck != null) mDeck.setSavedIds(mSaved);
+                        refreshSavedShelf();
                         updateFeaturedSave();
                     }
                 }
@@ -250,6 +294,15 @@ public class HomeActivity extends Activity {
                 @Override
                 public void onSelected(Movie movie) {
                     setFeatured(movie, false);
+                }
+            });
+        }
+        if (mAmb != null) {
+            mAmb.setPaletteListener(new AmbientBackdropView.PaletteListener() {
+                @Override
+                public void onPalette(int contentAccent) {
+                    mContentAccent = contentAccent;
+                    applyPalette();
                 }
             });
         }
@@ -316,6 +369,19 @@ public class HomeActivity extends Activity {
                 if (mDeck != null) mDeck.swipeRight();
             }
         });
+        // Quick appearance toggles in the footer dock
+        click(R.id.dock_theme, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { cycleTheme(); }
+        });
+        click(R.id.dock_accent, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { cycleAccent(); }
+        });
+        click(R.id.dock_glass, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { cycleGlass(); }
+        });
         applyTheme();
         updateClock();
         updateDockStatus();
@@ -324,6 +390,7 @@ public class HomeActivity extends Activity {
         Weather.Data d = Weather.loadCache(this);
         if (d != null) renderWeather(d);
         maybeRefreshWeather();
+        scheduleIdleWatch();
     }
 
     private void startRotationWatch() {
@@ -356,6 +423,7 @@ public class HomeActivity extends Activity {
         if (!mRecommendations.isEmpty()) {
             setFeatured(mRecommendations.get(0), false);
         }
+        refreshSavedShelf();
     }
 
     private void bindHomeApps() {
@@ -472,6 +540,13 @@ public class HomeActivity extends Activity {
         Weather.Data d = Weather.loadCache(this);
         if (d != null) renderWeather(d);
         maybeRefreshWeather();
+        bindResumePill();
+        refreshSavedShelf();
+        if (mSaver) {
+            exitAmbientSaver();
+        } else {
+            scheduleIdleWatch();
+        }
         if (mFirstResume) {
             mFirstResume = false;
             if (mHeroPlay != null) mHeroPlay.requestFocus();
@@ -489,6 +564,17 @@ public class HomeActivity extends Activity {
         sResumed = false;
         stopClock();
         stopRotationWatch();
+        stopIdleWatch();
+        if (mSaver) {
+            // Snap the shell back so a relaunch never shows a bare screen.
+            mSaver = false;
+            mUi.removeCallbacks(mSaverCycle);
+            mSaverFeatured = null;
+            if (mShell != null) {
+                mShell.setAlpha(1f);
+                mShell.setVisibility(View.VISIBLE);
+            }
+        }
     }
 
     @Override
@@ -519,6 +605,9 @@ public class HomeActivity extends Activity {
             mDeck.setAnimationsEnabled(!Prefs.reduceMotion(this));
         }
         updateFeaturedSave();
+        updateQuickToggles();
+        applyPalette();
+        refreshSavedShelf();
     }
 
     private Drawable primaryButtonBackground() {
@@ -572,8 +661,8 @@ public class HomeActivity extends Activity {
         if (mHeroSaveLabel == null || mFeatured == null) return;
         boolean saved = mSaved.contains(mFeatured.id);
         mHeroSaveLabel.setText(saved ? "Saved" : "Watchlist");
-        mHeroSaveLabel.setTextColor(saved ? mAccent : 0xFFF2F4F8);
-        mSaveIcon.setColor(saved ? mAccent : 0xFFFFFFFF, 0);
+        mHeroSaveLabel.setTextColor(saved ? contentAccent() : 0xFFF2F4F8);
+        mSaveIcon.setColor(saved ? contentAccent() : 0xFFFFFFFF, 0);
     }
 
     private boolean toggleSaved(String id) {
@@ -588,6 +677,7 @@ public class HomeActivity extends Activity {
         Prefs.putSavedIds(this, mSaved);
         if (mDeck != null) mDeck.setSavedIds(mSaved);
         updateFeaturedSave();
+        refreshSavedShelf();
         return saved;
     }
 
@@ -806,11 +896,264 @@ public class HomeActivity extends Activity {
         }
         // Stay in OBAA's task when the target allows it so Back returns home.
         intent.setFlags(intent.getFlags() & ~Intent.FLAG_ACTIVITY_NEW_TASK);
+        // Continue Watching: remember the last app launched from home.
+        if (pkg.length() > 0) {
+            Prefs.put(this, Prefs.K_LAST_PKG, pkg);
+            Prefs.put(this, Prefs.K_LAST_LABEL, label);
+        }
         try {
             startActivity(intent);
         } catch (Throwable t) {
             toast("Could not open " + label);
         }
+    }
+
+    /** UI accent that leans toward the current scene's palette (feature 1). */
+    private int contentAccent() {
+        if (mContentAccent != 0) return Ui.mix(mAccent, mContentAccent, 0.45f);
+        return mAccent;
+    }
+
+    /** Pushes the ambient scene colour into every accent-tinted surface. */
+    private void applyPalette() {
+        int accent = contentAccent();
+        if (mHeroEyebrow != null) mHeroEyebrow.setTextColor(accent);
+        if (mDeck != null) mDeck.setAccent(accent);
+        View heart = findViewById(R.id.deck_save_icon);
+        if (heart instanceof IconView) ((IconView) heart).setColor(accent, 0);
+        TextView count = (TextView) findViewById(R.id.deck_count);
+        if (count != null) count.setTextColor((accent & 0x00FFFFFF) | 0xB2000000);
+        View shelfLabel = findViewById(R.id.saved_shelf_label);
+        if (shelfLabel instanceof TextView) ((TextView) shelfLabel).setTextColor(accent);
+        LinearLayout tiles = (LinearLayout) findViewById(R.id.saved_tiles);
+        if (tiles != null) {
+            for (int i = 0; i < tiles.getChildCount(); i++) {
+                View v = tiles.getChildAt(i);
+                if (v instanceof MovieCardView) ((MovieCardView) v).setAccent(accent);
+            }
+        }
+        if (mResumeIcon != null && mHeroResume != null && mHeroResume.isShown()) {
+            mResumeIcon.setColor(accent, 0);
+        }
+    }
+
+    /** Saved ids resolved to titles (recommendation pool first, then catalog). */
+    private List<Movie> resolveSavedMovies() {
+        List<Movie> out = new ArrayList<Movie>();
+        Set<String> seen = new HashSet<String>();
+        for (String id : mSaved) {
+            Movie m = null;
+            for (Movie r : mRecommendations) {
+                if (r.id.equals(id)) { m = r; break; }
+            }
+            if (m == null) {
+                for (Movie cm : MovieCatalog.MOVIES) {
+                    if (cm.id.equals(id)) { m = cm; break; }
+                }
+            }
+            if (m != null && seen.add(m.title.toLowerCase(Locale.US))) out.add(m);
+        }
+        return out;
+    }
+
+    /** Feature 2: the watchlist shelf above the app tiles. */
+    private void refreshSavedShelf() {
+        LinearLayout tiles = (LinearLayout) findViewById(R.id.saved_tiles);
+        if (tiles == null) return;
+        View shelf = findViewById(R.id.saved_shelf);
+        List<Movie> items = resolveSavedMovies();
+        if (items.isEmpty()) {
+            tiles.removeAllViews();
+            if (shelf != null) shelf.setVisibility(View.GONE);
+            return;
+        }
+        if (shelf != null) shelf.setVisibility(View.VISIBLE);
+        tiles.removeAllViews();
+        int accent = contentAccent();
+        for (Movie m : items) {
+            MovieCardView card = new MovieCardView(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    (int) Ui.dp(this, 112), (int) Ui.dp(this, 142));
+            if (tiles.getChildCount() > 0) lp.leftMargin = (int) Ui.dp(this, 10);
+            card.setLayoutParams(lp);
+            card.setMovie(m);
+            card.setAccent(accent);
+            card.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (v instanceof MovieCardView) {
+                        showMovieDetails(((MovieCardView) v).getMovie());
+                    }
+                }
+            });
+            tiles.addView(card);
+        }
+    }
+
+    /** Feature 3: bind the resume pill to the last app launched from home. */
+    private void bindResumePill() {
+        if (mHeroResume == null) return;
+        String pkg = Prefs.lastPackage(this);
+        String label = Prefs.lastLabel(this);
+        if (pkg.length() == 0 || !isInstalled(pkg)) {
+            mHeroResume.setVisibility(View.GONE);
+            return;
+        }
+        String name = label.length() > 0 ? label : loadLabel(pkg);
+        mHeroResume.setVisibility(View.VISIBLE);
+        mHeroResumeLabel.setText("RESUME · " + name.toUpperCase(Locale.US));
+        mHeroResumeLabel.setTextColor(0xFFF2F4F8);
+        if (mResumeIcon != null) mResumeIcon.setColor(contentAccent(), 0);
+    }
+
+    // Feature 5: quick appearance toggles --------------------------------------
+
+    private void cycleTheme() {
+        String[] keys = {"midnight", "graphite", "aurora"};
+        String[] accents = {"amber", "blue", "violet"};
+        int next = 0;
+        for (int i = 0; i < keys.length; i++) {
+            if (keys[i].equals(Prefs.theme(this))) { next = (i + 1) % keys.length; break; }
+        }
+        Prefs.put(this, Prefs.K_THEME, keys[next]);
+        Prefs.put(this, Prefs.K_ACCENT, accents[next]);
+        applyTheme();
+        toast(Prefs.themeName(this) + " theme");
+    }
+
+    private void cycleAccent() {
+        String[] keys = {"amber", "coral", "violet", "mint", "blue"};
+        int next = 0;
+        for (int i = 0; i < keys.length; i++) {
+            if (keys[i].equals(Prefs.accentKey(this))) { next = (i + 1) % keys.length; break; }
+        }
+        Prefs.put(this, Prefs.K_ACCENT, keys[next]);
+        applyTheme();
+        toast(Prefs.accentName(this) + " accent");
+    }
+
+    private void cycleGlass() {
+        int[] steps = {0, 45, 62, 80, 100};
+        int cur = Prefs.glassPercent(this);
+        int next = steps[0];
+        int found = -1;
+        for (int i = 0; i < steps.length; i++) {
+            if (steps[i] == cur) { found = i; break; }
+        }
+        if (found >= 0) {
+            next = steps[(found + 1) % steps.length];
+        } else {
+            for (int s : steps) {
+                if (s > cur) { next = s; break; }
+            }
+        }
+        Prefs.putInt(this, Prefs.K_GLASS, next);
+        applyTheme();
+        toast("Glass " + next);
+    }
+
+    private void updateQuickToggles() {
+        TextView t = (TextView) findViewById(R.id.dock_theme_label);
+        if (t != null) t.setText(Prefs.themeName(this).toUpperCase(Locale.US));
+        IconView ti = (IconView) findViewById(R.id.dock_theme_icon);
+        if (ti != null) { ti.setMode(IconView.DISPLAY); ti.setColor(mAccent, 0); }
+        TextView a = (TextView) findViewById(R.id.dock_accent_label);
+        if (a != null) a.setText(Prefs.accentName(this).toUpperCase(Locale.US));
+        IconView ai = (IconView) findViewById(R.id.dock_accent_icon);
+        if (ai != null) { ai.setMode(IconView.PALETTE); ai.setColor(mAccent, 0); }
+        TextView g = (TextView) findViewById(R.id.dock_glass_label);
+        if (g != null) g.setText(Prefs.glassPercent(this) + "%");
+        IconView gi = (IconView) findViewById(R.id.dock_glass_icon);
+        if (gi != null) { gi.setMode(IconView.AURORA); gi.setColor(mAccent, 0); }
+    }
+
+    // Feature 4: ambient screensaver -------------------------------------------
+
+    private void scheduleIdleWatch() {
+        stopIdleWatch();
+        mIdleCheck = new Runnable() {
+            @Override
+            public void run() {
+                if (sResumed && !mSaver) enterAmbientSaver();
+            }
+        };
+        mUi.postDelayed(mIdleCheck, IDLE_TO_SAVER_MS);
+    }
+
+    private void stopIdleWatch() {
+        if (mIdleCheck != null) {
+            mUi.removeCallbacks(mIdleCheck);
+            mIdleCheck = null;
+        }
+    }
+
+    @Override
+    public void onUserInteraction() {
+        // Any key/touch wakes the saver and resets the idle timer.
+        if (mSaver) exitAmbientSaver();
+        else scheduleIdleWatch();
+    }
+
+    private void enterAmbientSaver() {
+        if (mSaver || Prefs.reduceMotion(this) || mShell == null || mAmb == null) return;
+        final List<Movie> pool = saverPool();
+        if (pool.isEmpty()) {
+            scheduleIdleWatch();
+            return;
+        }
+        mSaver = true;
+        mSaverFeatured = mFeatured;
+        mSaverIndex = 0;
+        mShell.animate().alpha(0f).setDuration(650).withEndAction(new Runnable() {
+            @Override
+            public void run() {
+                if (mSaver && mShell != null) mShell.setVisibility(View.GONE);
+            }
+        }).start();
+        cycleSaver(pool);
+    }
+
+    private void cycleSaver(final List<Movie> pool) {
+        if (!mSaver || pool.isEmpty()) return;
+        if (mSaverIndex >= pool.size()) mSaverIndex = 0;
+        setFeatured(pool.get(mSaverIndex), false);
+        mSaverIndex++;
+        mUi.removeCallbacks(mSaverCycle);
+        mSaverCycle = new Runnable() {
+            @Override
+            public void run() { cycleSaver(pool); }
+        };
+        mUi.postDelayed(mSaverCycle, SAVER_CYCLE_MS);
+    }
+
+    private void exitAmbientSaver() {
+        if (!mSaver) {
+            scheduleIdleWatch();
+            return;
+        }
+        mSaver = false;
+        mUi.removeCallbacks(mSaverCycle);
+        if (mShell != null) {
+            mShell.setVisibility(View.VISIBLE);
+            mShell.setAlpha(0f);
+            mShell.animate().alpha(1f).setDuration(300).start();
+        }
+        if (mSaverFeatured != null) setFeatured(mSaverFeatured, false);
+        mSaverFeatured = null;
+        scheduleIdleWatch();
+    }
+
+    /** Drift order for the saver: saved titles first, then recommendations. */
+    private List<Movie> saverPool() {
+        List<Movie> pool = new ArrayList<Movie>();
+        Set<String> seen = new HashSet<String>();
+        for (Movie m : resolveSavedMovies()) {
+            if (m != null && seen.add(m.title.toLowerCase(Locale.US))) pool.add(m);
+        }
+        for (Movie m : mRecommendations) {
+            if (m != null && seen.add(m.title.toLowerCase(Locale.US))) pool.add(m);
+        }
+        return pool;
     }
 
     private boolean isInstalled(String pkg) {

@@ -46,6 +46,9 @@ public final class Prefs {
     public static final String K_REC_FORCE = "rec_force";
     public static final String K_AUTO_UPDATE = "auto_update";
     public static final String K_HOME_DOCK = "home_dock";
+    /** Continue Watching: the app most recently launched from home. */
+    public static final String K_LAST_PKG = "last_launch_pkg";
+    public static final String K_LAST_LABEL = "last_launch_label";
 
     private Prefs() {}
 
@@ -203,6 +206,15 @@ public final class Prefs {
             sb.append(id);
         }
         put(c, K_SAVED, sb.toString());
+    }
+
+    /** Package of the app launched last from OBAA Home ("" if none yet). */
+    public static String lastPackage(Context c) {
+        return get(c, K_LAST_PKG, "");
+    }
+
+    public static String lastLabel(Context c) {
+        return get(c, K_LAST_LABEL, "");
     }
 
     public static boolean showDockApp(Context c, String key) {

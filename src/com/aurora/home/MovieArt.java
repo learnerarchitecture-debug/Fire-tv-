@@ -11,9 +11,10 @@ import android.graphics.Shader;
 import java.util.Random;
 
 /**
- * Procedural movie poster art: a coloured nebula, a ringed planet and
- * a field of stars. No bitmaps are decoded, which keeps the Fire TV
- * Stick's memory and CPU free.
+ * Procedural movie backdrop fallback: a cinematic gradient wash with a
+ * soft spotlight, a diagonal lens sweep and film grain. No bitmaps are
+ * decoded, which keeps the Fire TV Stick's memory and CPU free — and it
+ * only shows when no real artwork could be fetched.
  */
 public final class MovieArt {
 
@@ -36,60 +37,39 @@ public final class MovieArt {
 
         float min = Math.min(r.width(), r.height());
         boolean wide = r.width() > r.height() * 1.65f;
-        float cx = r.left + r.width() * (wide ? 0.75f : 0.78f);
-        float cy = r.top + r.height() * (wide ? 0.44f : 0.42f);
-        float rad = min * (wide ? 0.34f : 0.37f);
+        float cx = r.left + r.width() * (wide ? 0.72f : 0.60f);
+        float cy = r.top + r.height() * (wide ? 0.40f : 0.38f);
+        float rad = min * (wide ? 0.55f : 0.52f);
 
-        p.setShader(new RadialGradient(cx, cy, rad * 2.15f,
-                new int[]{Ui.alpha(m.c3, 95), Ui.alpha(m.c1, 40), 0x00000000},
-                new float[]{0f, 0.42f, 1f}, Shader.TileMode.CLAMP));
-        c.drawCircle(cx, cy, rad * 2.15f, p);
+        // A big soft spotlight halo — the feel of a lit scene, not a planet.
+        p.setShader(new RadialGradient(cx, cy, rad * 2.1f,
+                new int[]{Ui.alpha(m.c3, 110), Ui.alpha(m.c1, 46), 0x00000000},
+                new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP));
+        c.drawCircle(cx, cy, rad * 2.1f, p);
 
-        p.setShader(new RadialGradient(cx - rad * 0.32f, cy - rad * 0.36f, rad * 1.35f,
-                new int[]{m.c3, m.c1, m.c2},
-                new float[]{0f, 0.48f, 1f}, Shader.TileMode.CLAMP));
-        c.drawCircle(cx, cy, rad, p);
-
-        // A tilted planetary ring.
+        // Diagonal lens sweep: one soft band of light crossing the frame.
         c.save();
-        c.rotate(-18f, cx, cy);
-        p.setShader(null);
-        p.setStyle(Paint.Style.STROKE);
-        p.setStrokeWidth(Math.max(1f, rad * 0.035f));
-        p.setColor(Ui.alpha(m.c3, 145));
-        c.drawOval(new RectF(cx - rad * 1.55f, cy - rad * 0.42f,
-                cx + rad * 1.55f, cy + rad * 0.42f), p);
-        p.setStrokeWidth(Math.max(1f, rad * 0.018f));
-        p.setColor(Ui.alpha(m.c3, 75));
-        c.drawOval(new RectF(cx - rad * 1.82f, cy - rad * 0.56f,
-                cx + rad * 1.82f, cy + rad * 0.56f), p);
+        c.rotate(-24f, cx, cy);
+        p.setShader(new LinearGradient(cx - rad * 2.2f, cy, cx + rad * 2.2f, cy,
+                new int[]{0x00FFFFFF, Ui.alpha(m.c3, 60), 0x00FFFFFF},
+                new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP));
+        c.drawRect(cx - rad * 0.14f, r.top, cx + rad * 0.14f, r.bottom, p);
         c.restore();
 
-        // Stars, seeded so a movie always has the same sky.
+        // Film grain, seeded so a movie always has the same speckle.
         Random rnd = new Random(m.id.hashCode() * 31L + 7L);
-        int count = Math.max(8, Math.min(34, (int) (r.width() * r.height() / 4800f)));
+        int count = Math.max(24, Math.min(90, (int) (r.width() * r.height() / 3000f)));
         p.setStyle(Paint.Style.FILL);
+        p.setShader(null);
         for (int i = 0; i < count; i++) {
             float x = r.left + rnd.nextFloat() * r.width();
-            float y = r.top + rnd.nextFloat() * r.height() * 0.78f;
-            float sr = Math.max(0.5f, min * (0.004f + rnd.nextFloat() * 0.006f));
-            p.setColor(Ui.alpha(0xFFFFFFFF, 55 + rnd.nextInt(130)));
+            float y = r.top + rnd.nextFloat() * r.height();
+            float sr = Math.max(0.5f, min * (0.0018f + rnd.nextFloat() * 0.0032f));
+            p.setColor(Ui.alpha(0xFFFFFFFF, 22 + rnd.nextInt(85)));
             c.drawCircle(x, y, sr, p);
         }
 
-        // A soft aurora ribbon.
-        p.setStyle(Paint.Style.STROKE);
-        p.setStrokeWidth(Math.max(1f, min * 0.012f));
-        p.setColor(Ui.alpha(m.c3, 38));
-        Path ribbon = new Path();
-        ribbon.moveTo(r.left - r.width() * 0.05f, r.top + r.height() * 0.72f);
-        ribbon.cubicTo(r.left + r.width() * 0.28f, r.top + r.height() * 0.35f,
-                r.left + r.width() * 0.62f, r.top + r.height() * 0.58f,
-                r.right + r.width() * 0.05f, r.top + r.height() * 0.22f);
-        c.drawPath(ribbon, p);
-
-        // Bottom shade for titles. The ribbon above left the paint in
-        // STROKE mode, so switch back to FILL before drawing the shade.
+        // Bottom shade for titles; switch back to FILL before drawing it.
         p.setStyle(Paint.Style.FILL);
         p.setShader(new LinearGradient(0, r.top + r.height() * 0.42f,
                 0, r.bottom, new int[]{0x0005070B, 0xB305070B, 0xE605070B},

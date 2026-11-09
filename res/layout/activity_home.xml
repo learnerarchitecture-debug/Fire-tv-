@@ -401,6 +401,37 @@
                                 android:includeFontPadding="false"/>
                         </LinearLayout>
 
+                        <LinearLayout
+                            android:id="@+id/hero_resume"
+                            android:layout_width="wrap_content"
+                            android:layout_height="38dp"
+                            android:layout_marginLeft="9dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:background="@drawable/btn_ghost"
+                            android:paddingLeft="16dp"
+                            android:paddingRight="18dp"
+                            android:focusable="true"
+                            android:clickable="true"
+                            android:contentDescription="Resume last app"
+                            android:visibility="gone">
+
+                            <com.aurora.home.IconView
+                                android:id="@+id/hero_resume_icon"
+                                android:layout_width="13dp"
+                                android:layout_height="13dp"/>
+
+                            <TextView
+                                android:id="@+id/hero_resume_label"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginLeft="8dp"
+                                android:text="RESUME"
+                                android:textColor="@color/text_primary"
+                                android:textSize="11.5sp"
+                                android:includeFontPadding="false"/>
+                        </LinearLayout>
+
                         <FrameLayout
                             android:id="@+id/hero_next"
                             android:layout_width="wrap_content"
@@ -571,6 +602,41 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Feature 2: your watchlist shelf -->
+        <LinearLayout
+            android:id="@+id/saved_shelf"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="2dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/saved_shelf_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="32dp"
+                android:text="YOUR WATCHLIST"
+                android:textSize="7.5sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.26"
+                android:shadowColor="#9905070B"
+                android:shadowDy="2"
+                android:shadowRadius="6"
+                android:includeFontPadding="false"/>
+
+            <LinearLayout
+                android:id="@+id/saved_tiles"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:layout_marginLeft="32dp"
+                android:orientation="horizontal"
+                android:clipChildren="false"
+                android:clipToPadding="false"/>
+        </LinearLayout>
+
         <!-- Home apps row (Apple TV style tiles) -->
         <LinearLayout
             android:id="@+id/home_apps_row"
@@ -669,6 +735,96 @@
                 android:maxLines="1"
                 android:ellipsize="end"
                 android:includeFontPadding="false"/>
+
+            <LinearLayout
+                android:id="@+id/dock_theme"
+                android:layout_width="wrap_content"
+                android:layout_height="42dp"
+                android:layout_marginRight="3dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/dock_item_bg"
+                android:paddingLeft="10dp"
+                android:paddingRight="12dp"
+                android:focusable="true"
+                android:clickable="true"
+                android:contentDescription="Cycle theme">
+
+                <com.aurora.home.IconView
+                    android:id="@+id/dock_theme_icon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"/>
+
+                <TextView
+                    android:id="@+id/dock_theme_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="7dp"
+                    android:text="Midnight"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/footer_app_label_size"
+                    android:includeFontPadding="false"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/dock_accent"
+                android:layout_width="wrap_content"
+                android:layout_height="42dp"
+                android:layout_marginRight="3dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/dock_item_bg"
+                android:paddingLeft="10dp"
+                android:paddingRight="12dp"
+                android:focusable="true"
+                android:clickable="true"
+                android:contentDescription="Cycle accent colour">
+
+                <com.aurora.home.IconView
+                    android:id="@+id/dock_accent_icon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"/>
+
+                <TextView
+                    android:id="@+id/dock_accent_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="7dp"
+                    android:text="Amber"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/footer_app_label_size"
+                    android:includeFontPadding="false"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/dock_glass"
+                android:layout_width="wrap_content"
+                android:layout_height="42dp"
+                android:layout_marginRight="3dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/dock_item_bg"
+                android:paddingLeft="10dp"
+                android:paddingRight="12dp"
+                android:focusable="true"
+                android:clickable="true"
+                android:contentDescription="Cycle glass strength">
+
+                <com.aurora.home.IconView
+                    android:id="@+id/dock_glass_icon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"/>
+
+                <TextView
+                    android:id="@+id/dock_glass_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="7dp"
+                    android:text="62%"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/footer_app_label_size"
+                    android:includeFontPadding="false"/>
+            </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/dock_update"

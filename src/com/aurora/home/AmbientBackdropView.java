@@ -33,6 +33,27 @@ public final class AmbientBackdropView extends View {
     private long mStart = SystemClock.uptimeMillis();
     private long mFadeStart;
 
+    /** Receives the artwork's dominant colour so UI accents can follow the scene. */
+    public interface PaletteListener {
+        void onPalette(int contentAccent);
+    }
+
+    private PaletteListener mPaletteListener;
+
+    /** Someone wants to know whenever the ambient colour mood changes. */
+    public void setPaletteListener(PaletteListener l) {
+        mPaletteListener = l;
+        if (l != null && mMovie != null) l.onPalette(paletteColor(mMovie));
+    }
+
+    /** Derived accent from the title's palette colours (no bitmap sampling). */
+    private static int paletteColor(Movie m) {
+        if (m == null) return 0;
+        int base = Ui.mix(m.c1, m.c2, 0.5f);
+        int warmed = Ui.mix(base, m.c3, 0.34f);
+        return Ui.mix(warmed, 0xFFFFFFFF, 0.18f);
+    }
+
     private final Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint mText = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Rect mSrc = new Rect();
@@ -66,6 +87,7 @@ public final class AmbientBackdropView extends View {
         mMotion = !Prefs.reduceMotion(getContext());
         mFadeStart = SystemClock.uptimeMillis();
         if (m != null) ThumbnailLoader.load(getContext(), m, this);
+        if (mPaletteListener != null) mPaletteListener.onPalette(m == null ? 0 : paletteColor(m));
         restart();
     }
 

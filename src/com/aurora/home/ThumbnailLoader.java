@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Rect;
 import android.os.SystemClock;
 import android.util.JsonReader;
+import android.util.JsonToken;
 import android.util.LruCache;
 import android.view.View;
 
@@ -28,9 +29,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Fetches real movie artwork from the public iTunes Search API (no key).
- * Memory + disk cached; when a title cannot be matched the caller keeps the
- * procedural poster so the home screen never shows a blank card.
+ * Fetches real movie artwork. Sources, in order: the iTunes Search API
+ * (movies then TV), TVMaze for series, and finally the Wikipedia REST
+ * summary endpoint (its lead image is usually the film poster). All are
+ * public and keyless. Memory + disk cached; when nothing matches the
+ * caller keeps the procedural backdrop so the home screen never blanks.
  */
 public final class ThumbnailLoader {
 
@@ -135,32 +138,181 @@ public final class ThumbnailLoader {
         pruneDisk(app);
         Bitmap disk = fromDisk(app, m.id);
         if (disk != null) return disk;
+
+        boolean series = m.duration != null && m.duration.contains("season");
         String title = clean(m.title);
         String year = m.year == null ? "" : m.year.trim();
+        String want = m.title == null ? "" : m.title.trim();
+
+        // iTunes: movies (with + without year) before shows. TV-only sources
+        // are skipped for films so a same-named series never steals art.
         String[][] attempts = {
-                {"IN", "tvShow", title + " " + year},
-                {"US", "tvShow", title + " " + year},
-                {"IN", "movie", title + " " + year},
-                {"US", "movie", title + " " + year},
+                {"IN", "movie", (title + " " + year).trim()},
+                {"US", "movie", (title + " " + year).trim()},
+                {"IN", "movie", title},
+                {"US", "movie", title},
+                {"IN", "tvShow", title},
+                {"US", "tvShow", title},
         };
         for (String[] a : attempts) {
-            try {
-                String term = URLEncoder.encode(a[2].trim(), "UTF-8").replace("+", "%20");
-                String url = "https://itunes.apple.com/search?term=" + term
-                        + "&media=" + a[1] + "&limit=8&country=" + a[0];
-                String art = searchArtwork(url, title);
-                if (art != null) {
-                    Bitmap b = downloadBitmap(art, 640);
-                    if (b != null) {
-                        saveToDisk(app, m.id, b);
-                        return b;
-                    }
-                }
-            } catch (Throwable ignored) {
-                // try the next query
+            Bitmap b = itunesArt(a[0], a[1], a[2], want);
+            if (b != null) {
+                saveToDisk(app, m.id, b);
+                return b;
             }
         }
+        if (series) {
+            Bitmap b = tvMazeArt(want, year);
+            if (b != null) {
+                saveToDisk(app, m.id, b);
+                return b;
+            }
+        }
+        Bitmap w = wikiArt(want, year, series);
+        if (w != null) {
+            saveToDisk(app, m.id, w);
+            return w;
+        }
         return null;
+    }
+
+    private static Bitmap itunesArt(String country, String media, String term, String want) {
+        if (term == null || term.length() == 0 || want == null || want.length() == 0) return null;
+        try {
+            String url = "https://itunes.apple.com/search?term="
+                    + URLEncoder.encode(term, "UTF-8")
+                    + "&media=" + media + "&limit=6&country=" + country;
+            String art = searchArtwork(url, want);
+            if (art == null) return null;
+            return downloadBitmap(art, 640);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    /** Poster image for a TV series via TVMaze singlesearch (no key). */
+    private static Bitmap tvMazeArt(String rawTitle, String year) {
+        HttpURLConnection conn = null;
+        try {
+            if (rawTitle == null || rawTitle.trim().length() == 0) return null;
+            String url = "https://api.tvmaze.com/singlesearch/shows?q="
+                    + URLEncoder.encode(rawTitle.trim(), "UTF-8");
+            conn = httpGet(url, 7000, 9000);
+            if (conn.getResponseCode() != 200) return null;
+            JsonReader jr = new JsonReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+            String art = null;
+            String premiered = null;
+            jr.beginObject();
+            while (jr.hasNext()) {
+                String name = jr.nextName();
+                if ("image".equals(name)) {
+                    if (jr.peek() == JsonToken.NULL) { jr.skipValue(); continue; }
+                    jr.beginObject();
+                    while (jr.hasNext()) {
+                        String f = jr.nextName();
+                        String v = jr.nextString();
+                        if ("original".equals(f) || "medium".equals(f)) {
+                            if (art == null) art = v;
+                        }
+                    }
+                    jr.endObject();
+                } else if ("premiered".equals(name)) {
+                    premiered = jr.nextString();
+                } else {
+                    jr.skipValue();
+                }
+            }
+            jr.endObject();
+            jr.close();
+            if (art == null) return null;
+            // Same-name different-era series guard ("The Boys" 2019 vs 1960s).
+            if (year != null && year.length() >= 4 && premiered != null && premiered.length() >= 4) {
+                int wantYear = Integer.parseInt(year.substring(0, 4));
+                int gotYear = Integer.parseInt(premiered.substring(0, 4));
+                if (Math.abs(wantYear - gotYear) > 2) return null;
+            }
+            return downloadBitmap(art, 720);
+        } catch (Throwable ignored) {
+            return null;
+        } finally {
+            if (conn != null) try { conn.disconnect(); } catch (Throwable ignored) {}
+        }
+    }
+
+    /** Film posters via the Wikipedia REST summary endpoint (CC BY-SA). */
+    private static Bitmap wikiArt(String rawTitle, String year, boolean series) {
+        String t = rawTitle == null ? "" : rawTitle.trim();
+        if (t.length() == 0) return null;
+        List<String> variants = new ArrayList<String>();
+        variants.add(t);
+        if (series) {
+            variants.add(t + " (TV series)");
+            variants.add(t + " (" + year + " TV series)");
+        } else {
+            variants.add(t + " (film)");
+            variants.add(t + " (" + year + " film)");
+            variants.add(t + " " + year);
+        }
+        for (String v : variants) {
+            String art = wikiPageArt(v);
+            if (art == null) continue;
+            Bitmap b = downloadBitmap(art, 640);
+            if (b != null) return b;
+        }
+        return null;
+    }
+
+    private static String wikiPageArt(String pageTitle) {
+        HttpURLConnection conn = null;
+        try {
+            String url = "https://en.wikipedia.org/api/rest_v1/page/summary/"
+                    + URLEncoder.encode(pageTitle.replace(' ', '_'), "UTF-8")
+                    .replace("%2F", "/").replace("%3A", ":");
+            conn = httpGet(url, 5000, 7000);
+            if (conn.getResponseCode() != 200) return null;
+            JsonReader jr = new JsonReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+            String art = null;
+            boolean useless = false;
+            jr.beginObject();
+            while (jr.hasNext()) {
+                String name = jr.nextName();
+                if ("type".equals(name)) {
+                    String ty = jr.nextString();
+                    if ("disambiguation".equals(ty)) useless = true;
+                } else if ("originalimage".equals(name) || "thumbnail".equals(name)) {
+                    if (jr.peek() == JsonToken.NULL) { jr.skipValue(); continue; }
+                    jr.beginObject();
+                    while (jr.hasNext()) {
+                        String f = jr.nextName();
+                        if ("source".equals(f)) {
+                            String v = jr.nextString();
+                            if (art == null) art = v;
+                        } else {
+                            jr.skipValue();
+                        }
+                    }
+                    jr.endObject();
+                } else {
+                    jr.skipValue();
+                }
+            }
+            jr.endObject();
+            jr.close();
+            if (useless || art == null) return null;
+            return art;
+        } catch (Throwable ignored) {
+            return null;
+        } finally {
+            if (conn != null) try { conn.disconnect(); } catch (Throwable ignored) {}
+        }
+    }
+
+    private static HttpURLConnection httpGet(String urlStr, int connectMs, int readMs) throws Exception {
+        HttpURLConnection conn = (HttpURLConnection) new URL(urlStr).openConnection();
+        conn.setConnectTimeout(connectMs);
+        conn.setReadTimeout(readMs);
+        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) OBAAHome");
+        return conn;
     }
 
     /** Queries iTunes Search and picks the best-matching artwork URL. */
@@ -275,9 +427,9 @@ public final class ThumbnailLoader {
     private static volatile boolean sPruned;
 
     /**
-     * Runs once per process: deletes pre-v2 orphaned files (including the
-     * stale wrong-artwork entries the old matcher cached) and keeps the
-     * cache bounded by evicting the oldest files.
+     * Runs once per process: deletes older-generation cache files (v1 and
+     * v2 predate the multi-source matcher) and keeps the cache bounded by
+     * evicting the oldest files.
      */
     private static void pruneDisk(Context c) {
         if (sPruned) return;
@@ -288,7 +440,7 @@ public final class ThumbnailLoader {
             if (files == null) return;
             for (File f : files) {
                 String n = f.getName();
-                if (n.endsWith(".jpg") && !n.endsWith("_v2.jpg")) f.delete();
+                if (n.endsWith(".jpg") && !n.endsWith("_v3.jpg")) f.delete();
             }
             files = dir.listFiles();
             long total = 0;
@@ -316,8 +468,8 @@ public final class ThumbnailLoader {
 
     private static Bitmap fromDisk(Context c, String id) {
         try {
-            // "_v2" suffix invalidates art cached by the old (album-permitting) matcher.
-            File f = new File(cacheDir(c), id + "_v2.jpg");
+            // "_v3" invalidates art cached before the multi-source matcher.
+            File f = new File(cacheDir(c), id + "_v3.jpg");
             if (!f.exists() || f.length() < 1000) return null;
             BitmapFactory.Options o = new BitmapFactory.Options();
             o.inJustDecodeBounds = true;
@@ -339,7 +491,7 @@ public final class ThumbnailLoader {
             File dir = cacheDir(c);
             if (dir == null) return;
             dir.mkdirs();
-            File f = new File(dir, id + "_v2.jpg");
+            File f = new File(dir, id + "_v3.jpg");
             out = new FileOutputStream(f);
             b.compress(Bitmap.CompressFormat.JPEG, 86, out);
             out.flush();
