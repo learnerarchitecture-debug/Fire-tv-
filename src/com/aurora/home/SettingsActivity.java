@@ -560,7 +560,8 @@ public class SettingsActivity extends Activity {
         glass.addView(text, tlp);
 
         PosterArtView poster = new PosterArtView(this);
-        poster.setMovie(MovieCatalog.MOVIES.get(0));
+        Movie posterMovie = MovieCatalog.first();
+        if (posterMovie != null) poster.setMovie(posterMovie);
         LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(dp(50), dp(70));
         plp.leftMargin = dp(12);
         glass.addView(poster, plp);
@@ -902,7 +903,7 @@ public class SettingsActivity extends Activity {
 
         addSectionLabel("OBAA HOME");
         card = addCard();
-        addChevronRow(card, IconView.INFO, "Version", "2.0 · Glass",
+        addChevronRow(card, IconView.INFO, "Version", versionName() + " · Glass",
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -930,7 +931,7 @@ public class SettingsActivity extends Activity {
                         showLicensesDialog();
                     }
                 });
-        addNote("Made for Fire TV. All artwork is drawn on-device.");
+        addNote("Made for Fire TV. Movie artwork is fetched from the iTunes Search API and cached on-device; procedurally drawn when a title can't be matched.");
     }
 
     private void buildDeveloperPane() {
@@ -1187,7 +1188,7 @@ public class SettingsActivity extends Activity {
         try {
             return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
         } catch (Throwable t) {
-            return "2.0";
+            return "3.2.0";
         }
     }
 
@@ -1226,7 +1227,7 @@ public class SettingsActivity extends Activity {
         title.setIncludeFontPadding(false);
         text.addView(title);
         TextView version = new TextView(this);
-        version.setText("Version 2.0 · Glass");
+        version.setText("Version " + versionName() + " · Glass");
         version.setTextSize(8);
         version.setTextColor(0xFFA5ADBE);
         version.setIncludeFontPadding(false);

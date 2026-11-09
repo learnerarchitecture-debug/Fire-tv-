@@ -1,6 +1,7 @@
 package com.aurora.home;
 
-/** A single curated movie suggestion. All artwork is generated from these colours. */
+/** A curated movie suggestion: procedural palette data plus real artwork
+ *  fetched asynchronously by ThumbnailLoader (iTunes Search, disk cached). */
 public final class Movie {
     public final String id;
     public final String title;
@@ -10,8 +11,9 @@ public final class Movie {
     public final String rating;
     public final String description;
     public final String tag;
-    /** Optional thumbnail bitmap (e.g., from OTT provider artwork). */
-    public android.graphics.Bitmap thumbnail;
+    /** Artwork bitmap fetched by ThumbnailLoader. Volatile: the art pool
+     *  thread writes it while UI threads read it during draw. */
+    public volatile android.graphics.Bitmap thumbnail;
     public final int match;
     public final int c1;
     public final int c2;

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Rect;
+import android.os.SystemClock;
 import android.util.JsonReader;
 import android.util.LruCache;
 import android.view.View;
@@ -39,8 +40,9 @@ public final class ThumbnailLoader {
             return value.getByteCount();
         }
     };
-    /** Titles we tried and could not match; retried on the next process. */
-    private static final Set<String> MISSED = new HashSet<String>();
+    /** id -> fail timestamp; entries expire so art can be re-attempted. */
+    private static final Map<String, Long> MISSED = new HashMap<String, Long>();
+    private static final long MISSED_TTL_MS = 30L * 60L * 1000L;
     /** movie id -> views waiting for art. */
     private static final Map<String, List<View>> INFLIGHT = new HashMap<String, List<View>>();
     private static final Object LOCK = new Object();
@@ -63,7 +65,11 @@ public final class ThumbnailLoader {
             return;
         }
         synchronized (LOCK) {
-            if (MISSED.contains(m.id)) return;
+            Long miss = MISSED.get(m.id);
+            if (miss != null) {
+                if (SystemClock.uptimeMillis() - miss < MISSED_TTL_MS) return;
+                MISSED.remove(m.id);   // TTL expired: give this title another shot
+            }
             List<View> waiting = INFLIGHT.get(m.id);
             if (waiting != null) {
                 if (!waiting.contains(target)) waiting.add(target);
@@ -87,7 +93,7 @@ public final class ThumbnailLoader {
                 }
                 synchronized (LOCK) {
                     waiting = INFLIGHT.remove(m.id);
-                    if (bmp == null) MISSED.add(m.id);
+                    if (bmp == null) MISSED.put(m.id, SystemClock.uptimeMillis());
                 }
                 if (bmp != null) {
                     MEM.put(m.id, bmp);
@@ -126,6 +132,7 @@ public final class ThumbnailLoader {
     // ---- fetch pipeline ----------------------------------------------------
 
     private static Bitmap fetch(Context app, Movie m) {
+        pruneDisk(app);
         Bitmap disk = fromDisk(app, m.id);
         if (disk != null) return disk;
         String title = clean(m.title);
@@ -263,6 +270,44 @@ public final class ThumbnailLoader {
     }
 
     // ---- disk cache --------------------------------------------------------
+
+    private static final long DISK_CACHE_MAX = 40L * 1024L * 1024L; // 40 MB
+    private static volatile boolean sPruned;
+
+    /**
+     * Runs once per process: deletes pre-v2 orphaned files (including the
+     * stale wrong-artwork entries the old matcher cached) and keeps the
+     * cache bounded by evicting the oldest files.
+     */
+    private static void pruneDisk(Context c) {
+        if (sPruned) return;
+        sPruned = true;
+        try {
+            File dir = cacheDir(c);
+            File[] files = dir == null ? null : dir.listFiles();
+            if (files == null) return;
+            for (File f : files) {
+                String n = f.getName();
+                if (n.endsWith(".jpg") && !n.endsWith("_v2.jpg")) f.delete();
+            }
+            files = dir.listFiles();
+            long total = 0;
+            if (files != null) for (File f : files) total += f.length();
+            if (files == null || total <= DISK_CACHE_MAX) return;
+            java.util.Arrays.sort(files, new java.util.Comparator<File>() {
+                @Override
+                public int compare(File a, File b) {
+                    return Long.valueOf(a.lastModified()).compareTo(b.lastModified());
+                }
+            });
+            for (File f : files) {
+                if (total <= DISK_CACHE_MAX * 0.85f) break;
+                long len = f.length();
+                if (f.delete()) total -= len;
+            }
+        } catch (Throwable ignored) {
+        }
+    }
 
     private static File cacheDir(Context c) {
         if (c == null) return null;

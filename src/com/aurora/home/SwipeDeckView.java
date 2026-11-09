@@ -49,7 +49,8 @@ public class SwipeDeckView extends View {
     private final RectF mTmp = new RectF();
     private final Path mHeart = new Path();
 
-    private List<Movie> mDeck = new ArrayList<Movie>(MovieCatalog.MOVIES);
+    private List<Movie> mDeck = MovieCatalog.MOVIES.isEmpty()
+            ? new ArrayList<Movie>() : new ArrayList<Movie>(MovieCatalog.MOVIES);
     private final List<HistoryEntry> mHistory = new ArrayList<HistoryEntry>();
     private final Set<String> mSaved = new HashSet<String>();
     private int mIndex = 0;

@@ -10,6 +10,12 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
+    <!-- Option C "Ambient Drift": full-bleed artwork backdrop under everything -->
+    <com.aurora.home.AmbientBackdropView
+        android:id="@+id/amb_back"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
     <LinearLayout
         android:id="@+id/shell"
         android:layout_width="match_parent"
@@ -22,7 +28,7 @@
         android:clipChildren="false"
         android:clipToPadding="false">
 
-        <!-- Top bar: brand, weather, large-minutes clock, settings, profile -->
+        <!-- Top HUD: brand, weather, large-minutes clock, settings, profile -->
         <LinearLayout
             android:id="@+id/topbar"
             android:layout_width="match_parent"
@@ -244,50 +250,31 @@
                 android:clickable="true"/>
         </LinearLayout>
 
-        <!-- Featured hero + swipe deck -->
+        <!-- Ambient title block (bottom-left) + FOR YOU filmstrip (right) -->
         <LinearLayout
             android:id="@+id/main_row"
             android:layout_width="match_parent"
-            android:layout_height="@dimen/main_h"
-            android:layout_marginTop="10dp"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="4dp"
             android:orientation="horizontal"
             android:clipChildren="false"
             android:clipToPadding="false">
 
-            <FrameLayout
-                android:id="@+id/hero_card"
+            <LinearLayout
+                android:id="@+id/amb_hero"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:background="@drawable/glass_panel"
-                android:elevation="10dp"
-                android:tag="glass">
-
-                <com.aurora.home.PosterArtView
-                    android:id="@+id/hero_art"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"/>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="@drawable/hero_scrim"/>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="@drawable/glass_frame"/>
+                android:orientation="vertical"
+                android:gravity="bottom">
 
                 <LinearLayout
                     android:id="@+id/hero_content"
-                    android:layout_width="400dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical|start"
                     android:orientation="vertical"
-                    android:paddingLeft="24dp"
-                    android:paddingRight="18dp"
-                    android:paddingBottom="22dp"
-                    android:paddingTop="16dp">
+                    android:paddingBottom="8dp">
 
                     <TextView
                         android:id="@+id/hero_eyebrow"
@@ -297,14 +284,14 @@
                         android:textColor="#FFFFB45E"
                         android:textSize="@dimen/hero_eyebrow_size"
                         android:textStyle="bold"
-                        android:letterSpacing="0.2"
+                        android:letterSpacing="0.24"
                         android:includeFontPadding="false"/>
 
                     <TextView
                         android:id="@+id/hero_title"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="6dp"
                         android:text="Dune: Part Two"
                         android:textColor="@color/text_primary"
                         android:textSize="@dimen/hero_title_size"
@@ -312,17 +299,23 @@
                         android:fontFamily="sans-serif"
                         android:maxLines="2"
                         android:ellipsize="end"
-                        android:lineSpacingExtra="0dp"
+                        android:shadowColor="#8C05070B"
+                        android:shadowDy="3"
+                        android:shadowRadius="14"
+                        android:lineSpacingExtra="-2dp"
                         android:includeFontPadding="false"/>
 
                     <TextView
                         android:id="@+id/hero_meta"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="5dp"
+                        android:layout_marginTop="7dp"
                         android:text="2024  ·  Sci-Fi · Epic  ·  2h 46m  ·  ★ 8.8"
-                        android:textColor="@color/text_secondary"
+                        android:textColor="#E6D8DEE8"
                         android:textSize="@dimen/hero_meta_size"
+                        android:shadowColor="#9905070B"
+                        android:shadowDy="2"
+                        android:shadowRadius="8"
                         android:maxLines="1"
                         android:ellipsize="end"
                         android:includeFontPadding="false"/>
@@ -331,10 +324,13 @@
                         android:id="@+id/hero_desc"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="5dp"
+                        android:layout_marginTop="6dp"
                         android:text="Paul Atreides unites with the Fremen and walks the path of revenge."
-                        android:textColor="#CCD4DEEA"
+                        android:textColor="#B3C3CBD8"
                         android:textSize="@dimen/hero_desc_size"
+                        android:shadowColor="#9905070B"
+                        android:shadowDy="2"
+                        android:shadowRadius="8"
                         android:maxLines="2"
                         android:ellipsize="end"
                         android:lineSpacingExtra="1dp"
@@ -342,36 +338,36 @@
 
                     <LinearLayout
                         android:layout_width="wrap_content"
-                        android:layout_height="32dp"
-                        android:layout_marginTop="11dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
                         android:orientation="horizontal"
                         android:gravity="center_vertical">
 
                         <LinearLayout
                             android:id="@+id/hero_play"
                             android:layout_width="wrap_content"
-                            android:layout_height="32dp"
+                            android:layout_height="38dp"
                             android:orientation="horizontal"
                             android:gravity="center_vertical"
                             android:background="@drawable/btn_primary"
-                            android:paddingLeft="14dp"
-                            android:paddingRight="16dp"
+                            android:paddingLeft="18dp"
+                            android:paddingRight="20dp"
                             android:focusable="true"
                             android:focusableInTouchMode="true"
                             android:clickable="true">
 
                             <com.aurora.home.IconView
                                 android:id="@+id/play_icon"
-                                android:layout_width="12dp"
-                                android:layout_height="12dp"/>
+                                android:layout_width="14dp"
+                                android:layout_height="14dp"/>
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginLeft="7dp"
+                                android:layout_marginLeft="8dp"
                                 android:text="@string/play"
                                 android:textColor="#12151C"
-                                android:textSize="10sp"
+                                android:textSize="11.5sp"
                                 android:textStyle="bold"
                                 android:includeFontPadding="false"/>
                         </LinearLayout>
@@ -379,225 +375,200 @@
                         <LinearLayout
                             android:id="@+id/hero_save"
                             android:layout_width="wrap_content"
-                            android:layout_height="32dp"
-                            android:layout_marginLeft="8dp"
+                            android:layout_height="38dp"
+                            android:layout_marginLeft="9dp"
                             android:orientation="horizontal"
                             android:gravity="center_vertical"
                             android:background="@drawable/btn_ghost"
-                            android:paddingLeft="13dp"
-                            android:paddingRight="15dp"
+                            android:paddingLeft="16dp"
+                            android:paddingRight="18dp"
                             android:focusable="true"
                             android:clickable="true">
 
                             <com.aurora.home.IconView
                                 android:id="@+id/save_icon"
-                                android:layout_width="12dp"
-                                android:layout_height="12dp"/>
+                                android:layout_width="14dp"
+                                android:layout_height="14dp"/>
 
                             <TextView
                                 android:id="@+id/hero_save_label"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginLeft="7dp"
+                                android:layout_marginLeft="8dp"
                                 android:text="@string/watchlist"
                                 android:textColor="@color/text_primary"
-                                android:textSize="10sp"
+                                android:textSize="11.5sp"
                                 android:includeFontPadding="false"/>
                         </LinearLayout>
+
+                        <FrameLayout
+                            android:id="@+id/hero_next"
+                            android:layout_width="wrap_content"
+                            android:layout_height="38dp"
+                            android:layout_marginLeft="9dp"
+                            android:background="@drawable/btn_ghost"
+                            android:focusable="true"
+                            android:clickable="true"
+                            android:contentDescription="Next recommendation">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:layout_marginLeft="16dp"
+                                android:layout_marginRight="18dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <com.aurora.home.IconView
+                                    android:id="@+id/hero_next_icon"
+                                    android:layout_width="11dp"
+                                    android:layout_height="11dp"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginLeft="7dp"
+                                    android:text="NEXT"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="10sp"
+                                    android:textStyle="bold"
+                                    android:letterSpacing="0.12"
+                                    android:includeFontPadding="false"/>
+                            </LinearLayout>
+                        </FrameLayout>
                     </LinearLayout>
                 </LinearLayout>
-            </FrameLayout>
+            </LinearLayout>
 
-            <FrameLayout
-                android:id="@+id/swipe_panel"
+            <LinearLayout
+                android:id="@+id/film_panel"
                 android:layout_width="@dimen/swipe_w"
                 android:layout_height="match_parent"
                 android:layout_marginLeft="@dimen/main_gap"
-                android:background="@drawable/glass_panel"
-                android:elevation="10dp"
-                android:tag="glass">
+                android:orientation="vertical"
+                android:paddingBottom="10dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="vertical"
-                    android:paddingLeft="12dp"
-                    android:paddingRight="12dp"
-                    android:paddingTop="11dp"
-                    android:paddingBottom="9dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/for_you"
-                                android:textColor="@color/text_hint"
-                                android:textSize="6.5sp"
-                                android:textStyle="bold"
-                                android:letterSpacing="0.18"
-                                android:includeFontPadding="false"/>
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                android:text="@string/find_next"
-                                android:textColor="@color/text_primary"
-                                android:textSize="13sp"
-                                android:textStyle="bold"
-                                android:maxLines="2"
-                                android:ellipsize="end"
-                                android:lineSpacingExtra="0dp"
-                                android:includeFontPadding="false"/>
-                        </LinearLayout>
-
-                        <TextView
-                            android:id="@+id/deck_count"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="1 / 8"
-                            android:textColor="@color/text_hint"
-                            android:textSize="7sp"
-                            android:includeFontPadding="false"/>
-                    </LinearLayout>
-
-                    <com.aurora.home.SwipeDeckView
-                        android:id="@+id/swipe_deck"
-                        android:layout_width="match_parent"
-                        android:layout_height="0dp"
-                        android:layout_weight="1"
-                        android:layout_marginTop="5dp"
-                        android:focusable="true"
-                        android:focusableInTouchMode="true"/>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="28dp"
-                        android:layout_marginTop="3dp"
-                        android:orientation="horizontal"
-                        android:gravity="center">
-
-                        <FrameLayout
-                            android:id="@+id/deck_undo"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
-                            android:layout_marginRight="7dp"
-                            android:background="@drawable/deck_action_bg"
-                            android:focusable="true"
-                            android:clickable="true">
-
-                            <com.aurora.home.IconView
-                                android:id="@+id/undo_icon"
-                                android:layout_width="14dp"
-                                android:layout_height="14dp"
-                                android:layout_gravity="center"/>
-                        </FrameLayout>
-
-                        <FrameLayout
-                            android:id="@+id/deck_pass"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
-                            android:layout_marginRight="7dp"
-                            android:background="@drawable/deck_action_bg"
-                            android:focusable="true"
-                            android:clickable="true">
-
-                            <com.aurora.home.IconView
-                                android:id="@+id/pass_icon"
-                                android:layout_width="14dp"
-                                android:layout_height="14dp"
-                                android:layout_gravity="center"/>
-                        </FrameLayout>
-
-                        <FrameLayout
-                            android:id="@+id/deck_save"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
-                            android:background="@drawable/deck_action_bg"
-                            android:focusable="true"
-                            android:clickable="true">
-
-                            <com.aurora.home.IconView
-                                android:id="@+id/deck_save_icon"
-                                android:layout_width="14dp"
-                                android:layout_height="14dp"
-                                android:layout_gravity="center"/>
-                        </FrameLayout>
-                    </LinearLayout>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:gravity="center"
-                        android:text="@string/deck_hint"
-                        android:textColor="@color/text_hint"
-                        android:textSize="6.5sp"
-                        android:letterSpacing="0.12"
-                        android:includeFontPadding="false"/>
-                </LinearLayout>
-            </FrameLayout>
-        </LinearLayout>
-
-        <!-- Hero recommendation + Next button -->
-        <LinearLayout
-            android:id="@+id/hero_row"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="8dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:clipChildren="false"
-            android:clipToPadding="false">
-
-            <FrameLayout
-                android:id="@+id/hero_next"
-                android:layout_width="0dp"
-                android:layout_height="32dp"
-                android:layout_weight="1"
-                android:layout_marginLeft="@dimen/screen_pad"
-                android:layout_marginRight="@dimen/screen_pad"
-                android:background="@drawable/btn_ghost"
-                android:focusable="true"
-                android:clickable="true"
-                android:contentDescription="Next recommendation">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
 
-                    <com.aurora.home.IconView
-                        android:id="@+id/hero_next_icon"
-                        android:layout_width="10dp"
-                        android:layout_height="10dp"/>
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/for_you"
+                            android:textColor="#CCB4BCCB"
+                            android:textSize="7.5sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.26"
+                            android:shadowColor="#9905070B"
+                            android:shadowDy="2"
+                            android:shadowRadius="6"
+                            android:includeFontPadding="false"/>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/find_next"
+                            android:textColor="@color/text_primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:shadowColor="#9905070B"
+                            android:shadowDy="2"
+                            android:shadowRadius="8"
+                            android:maxLines="2"
+                            android:ellipsize="end"
+                            android:lineSpacingExtra="0dp"
+                            android:includeFontPadding="false"/>
+                    </LinearLayout>
 
                     <TextView
+                        android:id="@+id/deck_count"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginLeft="6dp"
-                        android:text="NEXT"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="9sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.1"
+                        android:layout_marginLeft="8dp"
+                        android:text="1 / 8"
+                        android:textColor="#CCB4BCCB"
+                        android:textSize="8sp"
+                        android:shadowColor="#9905070B"
+                        android:shadowDy="2"
+                        android:shadowRadius="6"
                         android:includeFontPadding="false"/>
                 </LinearLayout>
-            </FrameLayout>
+
+                <com.aurora.home.FilmstripView
+                    android:id="@+id/swipe_film"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginTop="8dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="30dp"
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal"
+                    android:gravity="center">
+
+                    <FrameLayout
+                        android:id="@+id/deck_undo"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_marginRight="8dp"
+                        android:background="@drawable/deck_action_bg"
+                        android:focusable="true"
+                        android:clickable="true">
+
+                        <com.aurora.home.IconView
+                            android:id="@+id/undo_icon"
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:layout_gravity="center"/>
+                    </FrameLayout>
+
+                    <FrameLayout
+                        android:id="@+id/deck_pass"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_marginRight="8dp"
+                        android:background="@drawable/deck_action_bg"
+                        android:focusable="true"
+                        android:clickable="true">
+
+                        <com.aurora.home.IconView
+                            android:id="@+id/pass_icon"
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:layout_gravity="center"/>
+                    </FrameLayout>
+
+                    <FrameLayout
+                        android:id="@+id/deck_save"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:background="@drawable/deck_action_bg"
+                        android:focusable="true"
+                        android:clickable="true">
+
+                        <com.aurora.home.IconView
+                            android:id="@+id/deck_save_icon"
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:layout_gravity="center"/>
+                    </FrameLayout>
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
 
         <!-- Home apps row (Apple TV style tiles) -->

@@ -48,6 +48,7 @@ public class HomeActivity extends Activity {
     private WeatherIconView mWxIcon;
     private LinearLayout mWeatherChip;
     private PosterArtView mHeroArt;
+    private AmbientBackdropView mAmb;
     private TextView mHeroEyebrow, mHeroTitle, mHeroMeta, mHeroDesc;
     private TextView mHeroSaveLabel;
     private LinearLayout mHeroPlay, mHeroSave;
@@ -58,7 +59,7 @@ public class HomeActivity extends Activity {
     private LinearLayout mDockUpdate;
     private IconView mDockAddIcon;
     private IconLoader mLoader;
-    private SwipeDeckView mDeck;
+    private FilmstripView mDeck;
     private final Handler mUi = new Handler();
     private Runnable mTick;
     private Runnable mRotationTick;
@@ -86,6 +87,7 @@ public class HomeActivity extends Activity {
 
         mRoot = findViewById(R.id.root);
         mBg = (AuroraBackgroundView) findViewById(R.id.bg);
+        mAmb = (AmbientBackdropView) findViewById(R.id.amb_back);
         mHour = (TextView) findViewById(R.id.clock_hour);
         mColon = (TextView) findViewById(R.id.clock_colon);
         mMinute = (TextView) findViewById(R.id.clock_minute);
@@ -96,7 +98,7 @@ public class HomeActivity extends Activity {
         mWxLoc = (TextView) findViewById(R.id.wx_loc);
         mWxIcon = (WeatherIconView) findViewById(R.id.wx_icon);
         mWeatherChip = (LinearLayout) findViewById(R.id.weather_chip);
-        mHeroArt = (PosterArtView) findViewById(R.id.hero_art);
+        // Full-bleed hero art now lives in AmbientBackdropView (Option C).
         mHeroEyebrow = (TextView) findViewById(R.id.hero_eyebrow);
         mHeroTitle = (TextView) findViewById(R.id.hero_title);
         mHeroMeta = (TextView) findViewById(R.id.hero_meta);
@@ -148,15 +150,58 @@ public class HomeActivity extends Activity {
         icon(mDockSettingsIcon, IconView.GEAR, 0);
         icon(mDockAppsIcon, IconView.APPS, 0);
         icon(mSettingsIcon, IconView.GEAR, 0);
+        // Film panel action glyphs (undo / pass / save / next)
+        View undo = findViewById(R.id.undo_icon);
+        if (undo instanceof IconView) {
+            IconView i = (IconView) undo;
+            i.setMode(IconView.UNDO);
+            i.setColor(0xFFF2F4F8, 0);
+        }
+        View pass = findViewById(R.id.pass_icon);
+        if (pass instanceof IconView) {
+            IconView i = (IconView) pass;
+            i.setMode(IconView.CLOSE);
+            i.setColor(0xFFF2F4F8, 0);
+        }
+        View heart = findViewById(R.id.deck_save_icon);
+        if (heart instanceof IconView) {
+            IconView i = (IconView) heart;
+            i.setMode(IconView.HEART);
+            i.setColor(Prefs.accent(this), 0);
+        }
+        View next = findViewById(R.id.hero_next_icon);
+        if (next instanceof IconView) {
+            IconView i = (IconView) next;
+            i.setMode(IconView.CHEVRON);
+            i.setColor(0xFFF2F4F8, 0);
+        }
 
         mLoader = new IconLoader(this, 96);
         mSaved = Prefs.savedIds(this);
-        mDeck = (SwipeDeckView) findViewById(R.id.swipe_deck);
+        mDeck = (FilmstripView) findViewById(R.id.swipe_film);
         if (mDeck != null) {
             mDeck.setSavedIds(mSaved);
             mDeck.setAccent(Prefs.accent(this));
             mDeck.setAnimationsEnabled(!Prefs.reduceMotion(this));
-            mDeck.setListener(new SwipeDeckView.Listener() {
+            mDeck.setEdgeListener(new FilmstripView.EdgeListener() {
+                @Override
+                public void onUpEdge() {
+                    if (mHeroPlay != null && mHeroPlay.isShown()) {
+                        mHeroPlay.requestFocus();
+                    } else if (mHeroSave != null && mHeroSave.isShown()) {
+                        mHeroSave.requestFocus();
+                    }
+                }
+
+                @Override
+                public void onDownEdge() {
+                    LinearLayout row = (LinearLayout) findViewById(R.id.home_apps_row);
+                    if (row != null && row.getChildCount() > 0) {
+                        row.getChildAt(0).requestFocus();
+                    }
+                }
+            });
+            mDeck.setListener(new FilmstripView.Listener() {
                 @Override
                 public void onSwiped(Movie movie, boolean saved) {
                     if (saved) {
@@ -201,6 +246,11 @@ public class HomeActivity extends Activity {
                         showMovieDetails(movie);
                     }
                 }
+
+                @Override
+                public void onSelected(Movie movie) {
+                    setFeatured(movie, false);
+                }
             });
         }
         bindHomeApps();
@@ -240,13 +290,11 @@ public class HomeActivity extends Activity {
                 toast(saved ? "Saved to watchlist" : "Removed from watchlist");
             }
         });
-        // Hero next recommendation
+        // Hero next recommendation (amen: steps the filmstrip selection)
         click(R.id.hero_next, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mRecommendations.size() > 1) {
-                    setFeatured(mRecommendations.get(1), false);
-                }
+                if (mDeck != null) mDeck.nextSelection();
             }
         });
         // Deck action buttons (right-side swipe card panel)
@@ -509,7 +557,8 @@ public class HomeActivity extends Activity {
     private void setFeatured(Movie movie, boolean fromRail) {
         if (movie == null) return;
         mFeatured = movie;
-        mHeroArt.setMovie(movie);
+        if (mAmb != null) mAmb.setMovie(movie);
+        if (mHeroArt != null) mHeroArt.setMovie(movie);
         String eyebrow = "FEATURED · " + movie.tag;
         if (movie.providerName.length() > 0) eyebrow += " · " + movie.providerName;
         mHeroEyebrow.setText(eyebrow.toUpperCase(Locale.US));

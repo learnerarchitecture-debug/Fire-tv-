@@ -13,7 +13,7 @@ public class PosterArtView extends View {
 
     private final Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final RectF mRect = new RectF();
-    private Movie mMovie = MovieCatalog.MOVIES.get(0);
+    private Movie mMovie = MovieCatalog.first();
 
     public PosterArtView(Context c) {
         super(c);
@@ -32,6 +32,7 @@ public class PosterArtView extends View {
 
     @Override
     protected void onDraw(Canvas c) {
+        if (mMovie == null) return;
         float radius = Ui.dp(getContext(), 21);
         mRect.set(0, 0, getWidth(), getHeight());
         // Use thumbnail bitmap if present; otherwise procedural poster.

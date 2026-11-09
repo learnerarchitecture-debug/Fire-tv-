@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -247,11 +248,16 @@ public final class Recommendations {
     public static List<Movie> build(Context context, int rotation) {
         Set<String> installed = installedPackages(context);
         List<Movie> pool = new ArrayList<Movie>();
+        // Titles already present (exact, case-insensitive) so the same movie
+        // never appears twice under two different id namespaces ("prime-dune2"
+        // vs the MovieCatalog fallback "dune2").
+        Set<String> seenTitles = new HashSet<String>();
         for (Provider p : PROVIDERS) {
             String pkg = resolve(p, installed);
             if (pkg == null) continue;
             int i = 0;
             for (Title t : p.titles) {
+                seenTitles.add(t.title.toLowerCase(Locale.US));
                 int c1 = Ui.mix(p.c1, 0xFF07090F, (i % 4) * 0.10f);
                 int c2 = Ui.mix(p.c2, 0xFF05070B, (i % 4) * 0.10f);
                 pool.add(new Movie(p.key + "-" + t.id, t.title, t.year, t.genre,
@@ -261,11 +267,17 @@ public final class Recommendations {
             }
         }
         if (pool.isEmpty()) {
-            for (Movie m : MovieCatalog.MOVIES) pool.add(copy(m, "OBAA Picks", ""));
+            for (Movie m : MovieCatalog.MOVIES) {
+                if (seenTitles.add(m.title.toLowerCase(Locale.US))) {
+                    pool.add(copy(m, "OBAA Picks", ""));
+                }
+            }
         }
         for (int i = 0; pool.size() < WINDOW && i < MovieCatalog.MOVIES.size(); i++) {
             Movie m = MovieCatalog.MOVIES.get(i);
-            if (!hasId(pool, m.id)) pool.add(copy(m, "OBAA Picks", ""));
+            if (seenTitles.add(m.title.toLowerCase(Locale.US))) {
+                pool.add(copy(m, "OBAA Picks", ""));
+            }
         }
         if (pool.isEmpty()) return pool;
 
@@ -283,11 +295,6 @@ public final class Recommendations {
                 m.match, m.description, m.tag, m.c1, m.c2, m.c3, provider, pkg);
     }
 
-    private static boolean hasId(List<Movie> list, String id) {
-        for (Movie m : list) if (m.id.equals(id)) return true;
-        return false;
-    }
-
     private static String resolve(Provider p, Set<String> installed) {
         for (String pkg : p.packages) {
             if (installed.contains(pkg)) return pkg;
@@ -296,6 +303,11 @@ public final class Recommendations {
     }
 
     private static Set<String> installedPackages(Context context) {
+        // 60s TTL so the 5-minute rotation (signature + build) does not
+        // sweep PackageManager twice every cycle on the main thread.
+        long now = System.currentTimeMillis();
+        Set<String> cached = sInstalled;
+        if (cached != null && now - sInstalledAt < 60000L) return cached;
         Set<String> out = new HashSet<String>();
         PackageManager pm = context.getPackageManager();
         for (Provider p : PROVIDERS) {
@@ -307,8 +319,13 @@ public final class Recommendations {
                 }
             }
         }
+        sInstalled = out;
+        sInstalledAt = now;
         return out;
     }
+
+    private static volatile Set<String> sInstalled;
+    private static volatile long sInstalledAt;
 
     /** Changes whenever an installed provider is added or removed. */
     public static String signature(Context context) {

@@ -14,7 +14,7 @@ public class MovieCardView extends View {
     private final Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint mText = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF mRect = new RectF();
-    private Movie mMovie = MovieCatalog.MOVIES.get(0);
+    private Movie mMovie = MovieCatalog.first();
     private int mAccent = 0xFFFFB45E;
     private boolean mAnimateFocus = true;
 
@@ -39,6 +39,13 @@ public class MovieCardView extends View {
         mMovie = m;
         ThumbnailLoader.load(getContext(), m, this);
         invalidate();
+    }
+
+    private void drawEmpty(Canvas c) {
+        mPaint.setShader(null);
+        mPaint.setStyle(Paint.Style.FILL);
+        mPaint.setColor(0xFF141824);
+        c.drawRect(0, 0, getWidth(), getHeight(), mPaint);
     }
 
     public Movie getMovie() {
@@ -69,6 +76,7 @@ public class MovieCardView extends View {
     protected void onDraw(Canvas c) {
         float w = getWidth(), h = getHeight();
         if (w <= 0 || h <= 0) return;
+        if (mMovie == null) { drawEmpty(c); return; }
         float radius = Ui.dp(getContext(), 14);
         mRect.set(0, 0, w, h);
         if (mMovie.thumbnail != null && !mMovie.thumbnail.isRecycled()) {

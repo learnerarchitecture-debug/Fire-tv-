@@ -167,6 +167,14 @@ public class AppPickerActivity extends Activity {
             @Override
             public void onAppClick(AppGridAdapter.AppEntry entry) {
                 if (entry == null) return;
+                // MODE_HOME: the home dock holds 8 apps — refuse a 9th instead
+                // of silently truncating at save time.
+                if (mMode == MODE_HOME && !mSelected.contains(entry.pkg)
+                        && mSelected.size() >= HOME_DOCK_CAP) {
+                    toast("Home screen holds " + HOME_DOCK_CAP
+                            + " apps — remove one from the selection first");
+                    return;
+                }
                 mAdapter.toggleSelected(entry.pkg);
                 mSelected = mAdapter.getSelected();
                 mAdapter.setSelected(mSelected);
@@ -214,10 +222,17 @@ public class AppPickerActivity extends Activity {
         }, 60);
     }
 
+    /** Home screen dock cap; save() enforces it as a last resort. */
+    private static final int HOME_DOCK_CAP = 8;
+
     private void updateCount() {
-        mCount.setText(mMode == MODE_HOME
-                ? mSelected.size() + " for home"
-                : mSelected.size() + " selected");
+        if (mMode == MODE_HOME) {
+            String s = Math.min(mSelected.size(), HOME_DOCK_CAP) + " for home";
+            if (mSelected.size() > HOME_DOCK_CAP) s += " · max " + HOME_DOCK_CAP;
+            mCount.setText(s);
+        } else {
+            mCount.setText(mSelected.size() + " selected");
+        }
     }
 
     private void save() {
@@ -228,7 +243,7 @@ public class AppPickerActivity extends Activity {
                 if (mSelected.contains(e.pkg)) {
                     if (sb.length() > 0) sb.append(',');
                     sb.append(e.pkg);
-                    if (++count >= 8) break;
+                    if (++count >= HOME_DOCK_CAP) break;
                 }
             }
             Prefs.put(this, Prefs.K_HOME_DOCK, sb.toString());

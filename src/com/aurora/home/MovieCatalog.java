@@ -48,10 +48,15 @@ public final class MovieCatalog {
 
     private MovieCatalog() {}
 
+    /** Null-safe first entry; null only if the catalog is ever emptied. */
+    public static Movie first() {
+        return MOVIES.isEmpty() ? null : MOVIES.get(0);
+    }
+
     public static Movie byId(String id) {
         for (Movie m : MOVIES) {
             if (m.id.equals(id)) return m;
         }
-        return MOVIES.get(0);
+        return first();
     }
 }

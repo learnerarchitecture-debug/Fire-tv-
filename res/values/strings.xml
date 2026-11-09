@@ -35,7 +35,7 @@
     <string name="settings_lead_privacy">Local data and permissions.</string>
     <string name="settings_lead_about">OBAA Home · Glass.</string>
     <string name="settings_footer_note">Changes apply instantly. Press Back to return home.</string>
-    <string name="about_body">OBAA Home 2.0\n\nA calm, glass-first launcher for Fire TV.\nCurated apps, a large-minutes clock and a swipeable movie deck — all drawn locally, with no bloatware.</string>
+    <string name="about_body">OBAA Home 3.2 · Ambient Drift\n\nA calm, cinematic launcher for Fire TV: full-bleed ambient movie canvases, a filmstrip deck and transparent docks.\nMovie artwork is fetched from the iTunes Search API and cached on-device; procedurally drawn when no match is found, with no bloatware.</string>
     <string name="default_home_hint">Fire TV 5.1 pins its own Home button. OBAA Home watches for the stock launcher and brings itself back to the front. On Fire OS 5.1.1, grant Usage access once from a computer: adb shell appops set com.aurora.home GET_USAGE_STATS allow. The stock launcher remains installed and can be restored by disabling the watcher. No accessibility permission is required.</string>
     <string name="accessibility_service_label">OBAA Home key</string>
     <string name="accessibility_service_description">Lets OBAA Home open when you press the Fire TV Home button.</string>
