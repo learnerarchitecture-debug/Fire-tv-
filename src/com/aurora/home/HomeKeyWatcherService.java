@@ -53,6 +53,8 @@ public class HomeKeyWatcherService extends Service {
     private static final long LAUNCH_DEBOUNCE_MS = 1200;
     private static final long POLL_INTERVAL_MS = 500;
     private static final long USAGE_WINDOW_MS = 6L * 60L * 60L * 1000L;
+    /** Grace after OBAA itself launches an app: never steal focus back. */
+    private static final long APP_LAUNCH_GRACE_MS = 8000L;
     private static final int NOTIFICATION_ID = 42;
 
     private BroadcastReceiver receiver;
@@ -63,7 +65,16 @@ public class HomeKeyWatcherService extends Service {
     private boolean launchPending;
     private boolean usageWarningShown;
     private String lastUsageForeground;
+    private int launcherStreak;
     private final Handler handler = new Handler(Looper.getMainLooper());
+
+    /** Called by HomeActivity whenever it launches another app, so the
+     *  watcher stays quiet while that app is starting up. */
+    public static void noteAppLaunch() {
+        sExternalLaunchAt = SystemClock.uptimeMillis();
+    }
+
+    private static volatile long sExternalLaunchAt;
 
     private final Runnable poller = new Runnable() {
         @Override
@@ -200,6 +211,15 @@ public class HomeKeyWatcherService extends Service {
     private void checkForeground() {
         if (HomeActivity.isResumed()) {
             launchPending = false;
+            launcherStreak = 0;
+            return;
+        }
+
+        // OBAA just launched another app on purpose; give it time to start.
+        // Without this grace, one 500ms poll that glimpses the stock launcher
+        // while an app boots would yank OBAA over the top of it.
+        if (SystemClock.uptimeMillis() - sExternalLaunchAt < APP_LAUNCH_GRACE_MS) {
+            launcherStreak = 0;
             return;
         }
 
@@ -251,7 +271,16 @@ public class HomeKeyWatcherService extends Service {
         boolean processSaysLauncher =
                 launcherImportance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND;
         boolean usageSaysLauncher = AMAZON_LAUNCHER.equals(usageForeground);
-        if (!processSaysLauncher && !usageSaysLauncher) return;
+        if (!processSaysLauncher && !usageSaysLauncher) {
+            launcherStreak = 0;
+            return;
+        }
+
+        // The launcher must stay foreground for two consecutive polls (~1s)
+        // so a single-frame flash during app startup never triggers a steal.
+        launcherStreak++;
+        if (launcherStreak < 2) return;
+        launcherStreak = 0;
 
         // A launch is already in flight; HomeActivity can take several seconds
         // to become resumed on Fire OS, so stay quiet instead of re-logging.

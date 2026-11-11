@@ -76,6 +76,7 @@ public class HomeActivity extends Activity {
     private LinearLayout mHeroResume;
     private TextView mHeroResumeLabel;
     private IconView mResumeIcon;
+    private TextView mSaverClock;
     private int mContentAccent = 0;
     // Ambient screensaver state
     private boolean mSaver;
@@ -120,6 +121,7 @@ public class HomeActivity extends Activity {
         mHeroPlay = (LinearLayout) findViewById(R.id.hero_play);
         mHeroSave = (LinearLayout) findViewById(R.id.hero_save);
         mShell = (LinearLayout) findViewById(R.id.shell);
+        mSaverClock = (TextView) findViewById(R.id.saver_clock);
         mHeroResume = (LinearLayout) findViewById(R.id.hero_resume);
         mHeroResumeLabel = (TextView) findViewById(R.id.hero_resume_label);
         mResumeIcon = (IconView) findViewById(R.id.hero_resume_icon);
@@ -301,7 +303,8 @@ public class HomeActivity extends Activity {
             mAmb.setPaletteListener(new AmbientBackdropView.PaletteListener() {
                 @Override
                 public void onPalette(int contentAccent) {
-                    mContentAccent = contentAccent;
+                    mContentAccent = Prefs.paletteTheme(HomeActivity.this)
+                            ? contentAccent : 0;
                     applyPalette();
                 }
             });
@@ -716,6 +719,17 @@ public class HomeActivity extends Activity {
         mAmpm.setVisibility(h24 ? View.GONE : View.VISIBLE);
         mDate.setVisibility(Prefs.showDate(this) ? View.VISIBLE : View.GONE);
         mDate.setText(new SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(now));
+        // Screensaver clock overlay: shown only while drifting.
+        if (mSaverClock != null) {
+            if (mSaver) {
+                mSaverClock.setText(String.valueOf(hour) + ":"
+                        + String.format(Locale.getDefault(), "%02d", now.getMinutes())
+                        + (h24 ? "" : " " + ampm));
+                mSaverClock.setVisibility(View.VISIBLE);
+            } else {
+                mSaverClock.setVisibility(View.GONE);
+            }
+        }
     }
 
     private void updateDockStatus() {
@@ -894,12 +908,15 @@ public class HomeActivity extends Activity {
             toast("Could not open " + label);
             return;
         }
-        // Stay in OBAA's task when the target allows it so Back returns home.
-        intent.setFlags(intent.getFlags() & ~Intent.FLAG_ACTIVITY_NEW_TASK);
+        // Launch apps in their own task, exactly like the stock launcher does.
+        // Stripping NEW_TASK pulled apps into OBAA's task, and some apps —
+        // notably Fire TV YouTube — unwind the whole task (including OBAA's
+        // Home screen) when their activity finishes.
         // Continue Watching: remember the last app launched from home.
         if (pkg.length() > 0) {
             Prefs.put(this, Prefs.K_LAST_PKG, pkg);
             Prefs.put(this, Prefs.K_LAST_LABEL, label);
+            HomeKeyWatcherService.noteAppLaunch();
         }
         try {
             startActivity(intent);
@@ -935,6 +952,7 @@ public class HomeActivity extends Activity {
         if (mResumeIcon != null && mHeroResume != null && mHeroResume.isShown()) {
             mResumeIcon.setColor(accent, 0);
         }
+        if (mDockAddIcon != null) mDockAddIcon.setColor(accent, 0);
     }
 
     /** Saved ids resolved to titles (recommendation pool first, then catalog). */
@@ -1110,6 +1128,7 @@ public class HomeActivity extends Activity {
                 if (mSaver && mShell != null) mShell.setVisibility(View.GONE);
             }
         }).start();
+        updateClock();
         cycleSaver(pool);
     }
 
@@ -1138,6 +1157,7 @@ public class HomeActivity extends Activity {
             mShell.setAlpha(0f);
             mShell.animate().alpha(1f).setDuration(300).start();
         }
+        updateClock();
         if (mSaverFeatured != null) setFeatured(mSaverFeatured, false);
         mSaverFeatured = null;
         scheduleIdleWatch();

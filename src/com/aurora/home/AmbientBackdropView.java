@@ -30,8 +30,25 @@ public final class AmbientBackdropView extends View {
     private Movie mMovie;
     private String mInit = "";
     private boolean mMotion = true;
+    private boolean mArtSampled = false;
     private long mStart = SystemClock.uptimeMillis();
     private long mFadeStart;
+
+    /** Re-checks the artwork a beat later so the palette can upgrade from
+     *  the curated colours to colours sampled from the real bitmap. */
+    private final Runnable mProbe = new Runnable() {
+        @Override
+        public void run() {
+            Movie m = mMovie;
+            if (m == null || mArtSampled) return;
+            Bitmap b = m.thumbnail;
+            if (b == null || b.isRecycled()) return;
+            int sampled = ArtPalette.dominant(b);
+            if (sampled == 0) return;
+            mArtSampled = true;
+            if (mPaletteListener != null) mPaletteListener.onPalette(sampled);
+        }
+    };
 
     /** Receives the artwork's dominant colour so UI accents can follow the scene. */
     public interface PaletteListener {
@@ -52,6 +69,12 @@ public final class AmbientBackdropView extends View {
         int base = Ui.mix(m.c1, m.c2, 0.5f);
         int warmed = Ui.mix(base, m.c3, 0.34f);
         return Ui.mix(warmed, 0xFFFFFFFF, 0.18f);
+    }
+
+    private void schedulePaletteProbe() {
+        removeCallbacks(mProbe);
+        postDelayed(mProbe, 700);
+        postDelayed(mProbe, 2100);
     }
 
     private final Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
@@ -79,14 +102,21 @@ public final class AmbientBackdropView extends View {
         boolean same = (m == mMovie)
                 || (m != null && mMovie != null && m.id != null && m.id.equals(mMovie.id));
         if (same) {
-            if (m != null) ThumbnailLoader.load(getContext(), m, this);
+            if (m != null) {
+                ThumbnailLoader.load(getContext(), m, this);
+                schedulePaletteProbe();
+            }
             return;
         }
         mMovie = m;
         mInit = m == null ? "" : initials(m.title);
         mMotion = !Prefs.reduceMotion(getContext());
         mFadeStart = SystemClock.uptimeMillis();
-        if (m != null) ThumbnailLoader.load(getContext(), m, this);
+        mArtSampled = false;
+        if (m != null) {
+            ThumbnailLoader.load(getContext(), m, this);
+            schedulePaletteProbe();
+        }
         if (mPaletteListener != null) mPaletteListener.onPalette(m == null ? 0 : paletteColor(m));
         restart();
     }

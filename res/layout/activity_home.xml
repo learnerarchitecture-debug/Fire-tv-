@@ -16,6 +16,25 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
+    <!-- Big clock overlay, visible only during the ambient screensaver -->
+    <TextView
+        android:id="@+id/saver_clock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|left"
+        android:layout_marginLeft="44dp"
+        android:layout_marginBottom="34dp"
+        android:text="9:08 PM"
+        android:textColor="#F2FFFFFF"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif"
+        android:shadowColor="#B305070B"
+        android:shadowDy="3"
+        android:shadowRadius="16"
+        android:includeFontPadding="false"
+        android:visibility="gone"/>
+
     <LinearLayout
         android:id="@+id/shell"
         android:layout_width="match_parent"
@@ -527,6 +546,11 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="8dp"
+                        android:background="@drawable/deck_count_bg"
+                        android:paddingLeft="8dp"
+                        android:paddingRight="8dp"
+                        android:paddingTop="4dp"
+                        android:paddingBottom="4dp"
                         android:text="1 / 8"
                         android:textColor="#CCB4BCCB"
                         android:textSize="8sp"
@@ -626,15 +650,23 @@
                 android:shadowRadius="6"
                 android:includeFontPadding="false"/>
 
-            <LinearLayout
-                android:id="@+id/saved_tiles"
+            <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="7dp"
                 android:layout_marginLeft="32dp"
-                android:orientation="horizontal"
-                android:clipChildren="false"
-                android:clipToPadding="false"/>
+                android:scrollbars="none"
+                android:fadingEdgeLength="0dp"
+                android:clipToPadding="false">
+
+                <LinearLayout
+                    android:id="@+id/saved_tiles"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"/>
+            </HorizontalScrollView>
         </LinearLayout>
 
         <!-- Home apps row (Apple TV style tiles) -->

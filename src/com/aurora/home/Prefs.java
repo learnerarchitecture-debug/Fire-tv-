@@ -49,6 +49,8 @@ public final class Prefs {
     /** Continue Watching: the app most recently launched from home. */
     public static final String K_LAST_PKG = "last_launch_pkg";
     public static final String K_LAST_LABEL = "last_launch_label";
+    /** UI accents follow the featured artwork's sampled palette. */
+    public static final String K_PALETTE = "palette_theme";
 
     private Prefs() {}
 
@@ -186,6 +188,11 @@ public final class Prefs {
 
     public static boolean reduceMotion(Context c) {
         return getBool(c, K_REDUCE_MOTION, false);
+    }
+
+    /** When false, accents stay on the fixed theme colour (no artwork sampling). */
+    public static boolean paletteTheme(Context c) {
+        return getBool(c, K_PALETTE, true);
     }
 
     public static Set<String> savedIds(Context c) {

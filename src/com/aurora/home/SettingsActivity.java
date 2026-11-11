@@ -629,6 +629,9 @@ public class SettingsActivity extends Activity {
                     }
                 });
         addSeekRow(card, "Glass intensity", Prefs.glassPercent(this));
+        addToggleRow(card, IconView.PALETTE, "Follow artwork colours",
+                "UI accents lean into the featured movie's real palette",
+                Prefs.K_PALETTE, true);
 
         addSectionLabel("MOTION");
         card = addCard();
