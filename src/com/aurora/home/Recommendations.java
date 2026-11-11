@@ -5,9 +5,13 @@ import android.content.pm.PackageManager;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -60,7 +64,7 @@ public final class Recommendations {
         provider("prime", "Prime Video", 0xFF1F6FEB, 0xFF07162E, 0xFF7FB7FF,
                 new String[]{"com.amazon.avod", "com.amazon.amazonvideo.livingroom"},
                 t("dune2", "Dune: Part Two", "2024", "Sci-Fi · Epic", "2h 46m",
-                        "8.8", 98, "Paul Atreides unites with the Fremen and walks the path of revenge against the conspirators who destroyed his family.", "TRENDING"),
+                        "8.4", 98, "Paul Atreides unites with the Fremen and walks the path of revenge against the conspirators who destroyed his family.", "TRENDING"),
                 t("theboys", "The Boys", "2019", "Action · Satire", "4 seasons",
                         "8.7", 96, "A group of vigilantes sets out to take down corrupt superheroes who abuse their powers.", "TOP 10"),
                 t("mirzapur", "Mirzapur", "2018", "Crime · Drama", "3 seasons",
@@ -87,11 +91,11 @@ public final class Recommendations {
                 new String[]{"tv.airtel.xstream.tvapp", "tv.airtel.xstream",
                         "com.airtel.xstream", "com.airtel.xstreamplay", "com.airtel.tv"},
                 t("jawan", "Jawan", "2023", "Action · Thriller", "2h 49m",
-                        "8.1", 95, "A man is driven by a personal vendetta to rectify the wrongs in society.", "BLOCKBUSTER"),
+                        "6.9", 95, "A man is driven by a personal vendetta to rectify the wrongs in society.", "BLOCKBUSTER"),
                 t("pathaan", "Pathaan", "2023", "Action · Spy", "2h 26m",
-                        "7.9", 93, "An exiled spy returns to stop a rogue outfit from unleashing a deadly attack.", "TRENDING"),
+                        "5.8", 93, "An exiled spy returns to stop a rogue outfit from unleashing a deadly attack.", "TRENDING"),
                 t("kota", "Kota Factory", "2019", "Drama · Coming of age", "3 seasons",
-                        "8.6", 94, "Students navigate friendship, pressure and ambition at a coaching institute in Kota.", "BINGE"),
+                        "9.0", 94, "Students navigate friendship, pressure and ambition at a coaching institute in Kota.", "BINGE"),
                 t("gullak", "Gullak", "2019", "Comedy · Family", "4 seasons",
                         "8.7", 96, "Warm, funny stories about a middle-class family and their everyday battles.", "FEEL GOOD"),
                 t("kapil", "The Kapil Sharma Show", "2016", "Comedy · Talk", "3 seasons",
@@ -124,7 +128,7 @@ public final class Recommendations {
         provider("zee5", "ZEE5", 0xFF9B51E0, 0xFF1A0726, 0xFFE0A8FF,
                 new String[]{"com.zee5.zee5", "com.zee5.androidtv", "com.zee5"},
                 t("kashmirfiles", "The Kashmir Files", "2022", "Drama · History", "2h 50m",
-                        "7.7", 91, "A retired officer searches for the truth about the exodus of Kashmiri Pandits.", "DRAMA"),
+                        "8.4", 91, "A retired officer searches for the truth about the exodus of Kashmiri Pandits.", "DRAMA"),
                 t("taj", "Taj: Divided by Blood", "2023", "Drama · History", "2 seasons",
                         "7.5", 89, "A Mughal emperor's sons battle for the throne in a story of ambition and betrayal.", "ORIGINAL"),
                 t("sunflower", "Sunflower", "2021", "Mystery · Comedy", "2 seasons",
@@ -137,7 +141,7 @@ public final class Recommendations {
                 t("biggboss", "Bigg Boss", "2006", "Reality · Drama", "17 seasons",
                         "6.5", 86, "Housemates live together under constant surveillance while competing for the trophy.", "REALITY"),
                 t("animal", "Animal", "2023", "Action · Crime", "3h 21m",
-                        "7.8", 92, "A son's obsessive love for his father spirals into a violent path.", "BLOCKBUSTER"),
+                        "6.2", 92, "A son's obsessive love for his father spirals into a violent path.", "BLOCKBUSTER"),
                 t("ramsetu", "Ram Setu", "2022", "Adventure · Mystery", "2h 30m",
                         "6.8", 87, "An archaeologist sets out to prove the existence of a legendary bridge.", "ADVENTURE"),
                 t("special26", "Special 26", "2013", "Crime · Thriller", "2h 24m",
@@ -148,7 +152,7 @@ public final class Recommendations {
                 t("nightofliving", "Night of the Living Dead", "1968", "Horror · Classic", "1h 36m",
                         "7.8", 92, "Seven strangers barricade a farmhouse while the recently dead walk the countryside.", "FREE CLASSIC"),
                 t("charade", "Charade", "1963", "Mystery · Comedy", "1h 53m",
-                        "7.9", 91, "A widow in Paris learns her late husband's fortune belonged to someone else — and three men want it.", "FREE CLASSIC"),
+                        "7.8", 91, "A widow in Paris learns her late husband's fortune belonged to someone else — and three men want it.", "FREE CLASSIC"),
                 t("hisgirlfriday", "His Girl Friday", "1940", "Comedy · Classic", "1h 32m",
                         "7.8", 90, "A fast-talking editor schemes to keep his star reporter ex-wife from remarrying.", "FREE CLASSIC"),
                 t("thekid", "The Kid", "1921", "Comedy · Classic", "1h 8m",
@@ -231,6 +235,69 @@ public final class Recommendations {
 
     private Recommendations() {}
 
+    /** Verified keyless deep links, "<providerKey>:<titleId>" → "<kind|id>".
+     *  YouTube ids are public-domain full-film uploads (titles confirmed
+     *  via YouTube oEmbed); Netflix ids come from each show's TVMaze
+     *  official site and from Wikidata property P1874 (Extraction 2).
+     *  Nothing here is guessed. */
+    private static final Map<String, String> VIDEO_IDS = new HashMap<String, String>();
+    static {
+        // youtube:nightofliving replaced after the first upload turned out
+        // geo-blocked in India; this one was verified playable on-device.
+        VIDEO_IDS.put("youtube:nightofliving", "yt|g2lc9v2mktU");
+        VIDEO_IDS.put("youtube:charade", "yt|XsTOUjQs6e0");
+        VIDEO_IDS.put("youtube:hisgirlfriday", "yt|tB8WGaB_CZk");
+        VIDEO_IDS.put("youtube:thekid", "yt|lX-NMTzHsKM");
+        VIDEO_IDS.put("netflix:stranger", "nf|80057281");
+        VIDEO_IDS.put("netflix:wednesday", "nf|81231974");
+        VIDEO_IDS.put("netflix:extraction2", "nf|81098494");
+        VIDEO_IDS.put("netflix:crown", "nf|80095248");
+        VIDEO_IDS.put("netflix:squidgame", "nf|81049132");
+    }
+
+    /** {kind, id} deep-link target for a provider title, or null. */
+    static String[] linkFor(String providerKey, String titleId) {
+        if (providerKey == null || titleId == null) return null;
+        String raw = VIDEO_IDS.get(providerKey + ":" + titleId);
+        if (raw == null) return null;
+        int cut = raw.indexOf('|');
+        if (cut <= 0 || cut == raw.length() - 1) return null;
+        return new String[]{raw.substring(0, cut), raw.substring(cut + 1)};
+    }
+
+    /** First genre token, lower-cased ("Action · Thriller" → "action").
+     *  This is the granularity recommendations learn at. */
+    static String genreKey(String genre) {
+        if (genre == null) return "";
+        int cut = genre.indexOf('·');
+        String g = cut > 0 ? genre.substring(0, cut) : genre;
+        return g.trim().toLowerCase(Locale.US);
+    }
+
+    /** Match % grows with learned affinity, clamped into 0..99. */
+    static int boostedMatch(int base, int genreAff, int providerAff) {
+        int v = base + 3 * genreAff + 2 * providerAff;
+        if (v > 99) v = 99;
+        if (v < 0) v = 0;
+        return v;
+    }
+
+    /** Learned ranking weight: genre affinity ×4, provider affinity ×2,
+     *  plus a small rotation-seeded jitter so the list never freezes. */
+    private static int learnedScore(Movie m, Map<String, Integer> aff, int rotation) {
+        int score = 4 * count(aff, "g:" + genreKey(m.genre));
+        if (m.providerPkg != null && m.providerPkg.length() > 0) {
+            score += 2 * count(aff, "p:" + m.providerPkg);
+        }
+        return score + Math.abs((m.id + ":" + rotation).hashCode()) % 7;
+    }
+
+    private static int count(Map<String, Integer> aff, String key) {
+        if (aff == null || key == null || key.length() == 0) return 0;
+        Integer v = aff.get(key);
+        return v == null ? 0 : v.intValue();
+    }
+
     private static Title t(String id, String title, String year, String genre,
                            String duration, String rating, int match,
                            String description, String tag) {
@@ -244,9 +311,11 @@ public final class Recommendations {
         PROVIDERS.add(p);
     }
 
-    /** A rotating window of installed-provider recommendations. */
+    /** A rotating window of installed-provider recommendations, weighted by
+     *  what the household actually opens (learned affinity). */
     public static List<Movie> build(Context context, int rotation) {
         Set<String> installed = installedPackages(context);
+        Map<String, Integer> aff = Prefs.affinity(context);
         List<Movie> pool = new ArrayList<Movie>();
         // Titles already present (exact, case-insensitive) so the same movie
         // never appears twice under two different id namespaces ("prime-dune2"
@@ -256,13 +325,18 @@ public final class Recommendations {
             String pkg = resolve(p, installed);
             if (pkg == null) continue;
             int i = 0;
+            int provAff = count(aff, "p:" + pkg);
             for (Title t : p.titles) {
                 seenTitles.add(t.title.toLowerCase(Locale.US));
                 int c1 = Ui.mix(p.c1, 0xFF07090F, (i % 4) * 0.10f);
                 int c2 = Ui.mix(p.c2, 0xFF05070B, (i % 4) * 0.10f);
+                String[] link = linkFor(p.key, t.id);
+                String kind = link == null ? "" : link[0];
+                String videoId = link == null ? "" : link[1];
+                int match = boostedMatch(t.match, count(aff, "g:" + genreKey(t.genre)), provAff);
                 pool.add(new Movie(p.key + "-" + t.id, t.title, t.year, t.genre,
-                        t.duration, t.rating, t.match, t.description, t.tag,
-                        c1, c2, p.c3, p.name, pkg));
+                        t.duration, t.rating, match, t.description, t.tag,
+                        c1, c2, p.c3, p.name, pkg, kind, videoId));
                 i++;
             }
         }
@@ -281,6 +355,24 @@ public final class Recommendations {
         }
         if (pool.isEmpty()) return pool;
 
+        // Learned ordering: titles in genres/providers the household opens
+        // float to the top, with a tiny per-rotation jitter. With no history
+        // yet the sort is skipped entirely, preserving the plain rotation.
+        boolean anyAffinity = false;
+        for (Integer v : aff.values()) {
+            if (v != null && v.intValue() > 0) { anyAffinity = true; break; }
+        }
+        if (anyAffinity) {
+            final int rot = rotation;
+            final Map<String, Integer> weights = aff;
+            Collections.sort(pool, new Comparator<Movie>() {
+                @Override
+                public int compare(Movie a, Movie b) {
+                    return learnedScore(b, weights, rot) - learnedScore(a, weights, rot);
+                }
+            });
+        }
+
         int n = Math.min(WINDOW, pool.size());
         int offset = ((rotation * 2) % pool.size() + pool.size()) % pool.size();
         List<Movie> out = new ArrayList<Movie>();
@@ -292,7 +384,8 @@ public final class Recommendations {
 
     private static Movie copy(Movie m, String provider, String pkg) {
         return new Movie(m.id, m.title, m.year, m.genre, m.duration, m.rating,
-                m.match, m.description, m.tag, m.c1, m.c2, m.c3, provider, pkg);
+                m.match, m.description, m.tag, m.c1, m.c2, m.c3, provider, pkg,
+                m.linkKind, m.videoId);
     }
 
     private static String resolve(Provider p, Set<String> installed) {

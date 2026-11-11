@@ -1014,6 +1014,18 @@ public class SettingsActivity extends Activity {
                     }
                 });
 
+        addSectionLabel("SELF-TEST");
+        card = addCard();
+        addChevronRow(card, IconView.INFO, "Run self-test",
+                "Checks the art matcher, palette sampler, deep links, "
+                        + "affinity maths and catalog integrity on this device",
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        runSelfTest();
+                    }
+                });
+
         addSectionLabel("UPDATES");
         card = addCard();
         addChevronRow(card, IconView.REFRESH, "Check for updates",
@@ -1049,6 +1061,20 @@ public class SettingsActivity extends Activity {
                 });
         addNote("Developer options mirror the home-screen controls. "
                 + "Changes apply immediately.");
+    }
+
+    private void runSelfTest() {
+        List<String> lines = SelfTest.runAll(this);
+        StringBuilder sb = new StringBuilder();
+        for (String line : lines) {
+            if (sb.length() > 0) sb.append('\n');
+            sb.append(line);
+        }
+        dialogBuilder()
+                .setTitle("Self-test")
+                .setMessage(sb.toString())
+                .setPositiveButton("OK", null)
+                .show();
     }
 
     private void openAppPicker() {

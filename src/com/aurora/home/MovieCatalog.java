@@ -12,7 +12,7 @@ public final class MovieCatalog {
     static {
         List<Movie> m = new ArrayList<Movie>();
         m.add(new Movie("dune2", "Dune: Part Two", "2024", "Sci-Fi · Epic", "2h 46m",
-                "8.8", 98,
+                "8.4", 98,
                 "Paul Atreides unites with the Fremen and walks the path of revenge against the conspirators who destroyed his family.",
                 "TRENDING", 0xFFC96B2A, 0xFF2B1208, 0xFFF4B86A));
         m.add(new Movie("br2049", "Blade Runner 2049", "2017", "Sci-Fi · Noir", "2h 44m",

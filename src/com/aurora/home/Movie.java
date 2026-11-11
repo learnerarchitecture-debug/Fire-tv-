@@ -21,17 +21,30 @@ public final class Movie {
     /** Installed OTT provider that supplies this recommendation. */
     public final String providerName;
     public final String providerPkg;
+    /** Keyless deep-link target: "yt" (YouTube video id) or "nf" (Netflix
+     *  title id). Empty when no verified link exists — Open then falls
+     *  back to launching the provider app. */
+    public final String linkKind;
+    public final String videoId;
 
     public Movie(String id, String title, String year, String genre, String duration,
                  String rating, int match, String description, String tag,
                  int c1, int c2, int c3) {
         this(id, title, year, genre, duration, rating, match, description, tag,
-                c1, c2, c3, "", "");
+                c1, c2, c3, "", "", "", "");
     }
 
     public Movie(String id, String title, String year, String genre, String duration,
                  String rating, int match, String description, String tag,
                  int c1, int c2, int c3, String providerName, String providerPkg) {
+        this(id, title, year, genre, duration, rating, match, description, tag,
+                c1, c2, c3, providerName, providerPkg, "", "");
+    }
+
+    public Movie(String id, String title, String year, String genre, String duration,
+                 String rating, int match, String description, String tag,
+                 int c1, int c2, int c3, String providerName, String providerPkg,
+                 String linkKind, String videoId) {
         this.id = id;
         this.title = title;
         this.year = year;
@@ -46,6 +59,8 @@ public final class Movie {
         this.c3 = c3;
         this.providerName = providerName == null ? "" : providerName;
         this.providerPkg = providerPkg == null ? "" : providerPkg;
+        this.linkKind = linkKind == null ? "" : linkKind;
+        this.videoId = videoId == null ? "" : videoId;
         // Real artwork is fetched asynchronously from the views via
         // ThumbnailLoader.load(...); the procedural poster is the fallback.
     }

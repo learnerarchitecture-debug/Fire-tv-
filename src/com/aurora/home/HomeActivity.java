@@ -133,12 +133,7 @@ public class HomeActivity extends Activity {
             mHeroResume.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    String pkg = Prefs.lastPackage(HomeActivity.this);
-                    if (pkg.length() > 0) {
-                        launchPackage(pkg, Prefs.lastLabel(HomeActivity.this));
-                    } else {
-                        toast("Nothing to resume yet");
-                    }
+                    resumeLast();
                 }
             });
         }
@@ -788,17 +783,20 @@ public class HomeActivity extends Activity {
         String watchlist = mSaved.contains(movie.id) ? "Remove from Watchlist" : "Add to Watchlist";
         final boolean hasProvider = movie.providerPkg.length() > 0;
         final String providerName = hasProvider ? movie.providerName : "Prime Video";
-        final String providerPkg = hasProvider ? movie.providerPkg : PKG_PRIME;
+        final boolean deepLinkable = movie.linkKind.length() > 0 && movie.videoId.length() > 0;
         String message = movie.meta() + "\n\n" + movie.description
                 + "\n\n" + movie.match + "% match for you";
         if (hasProvider) message += "\nAvailable in " + providerName;
+        if (deepLinkable) message += "\nPlays the actual title";
         dialogBuilder()
                 .setTitle(movie.title)
                 .setMessage(message)
-                .setPositiveButton("Open " + providerName, new DialogInterface.OnClickListener() {
+                .setPositiveButton(deepLinkable ? "Play now · " + providerName
+                                : "Open " + providerName,
+                        new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        launchPackage(providerPkg, providerName);
+                        launchTitle(movie);
                     }
                 })
                 .setNeutralButton(watchlist, new DialogInterface.OnClickListener() {
@@ -916,6 +914,10 @@ public class HomeActivity extends Activity {
         if (pkg.length() > 0) {
             Prefs.put(this, Prefs.K_LAST_PKG, pkg);
             Prefs.put(this, Prefs.K_LAST_LABEL, label);
+            // Learning: which providers the household opens, and the pill
+            // falls back to app-level resume (no stale title kept).
+            Prefs.bumpAffinity(this, "p:" + pkg);
+            Prefs.clearLastTitle(this);
             HomeKeyWatcherService.noteAppLaunch();
         }
         try {
@@ -923,6 +925,95 @@ public class HomeActivity extends Activity {
         } catch (Throwable t) {
             toast("Could not open " + label);
         }
+    }
+
+    // Real metadata: keyless deep links -----------------------------------------
+
+    /** Opens the actual title when a verified keyless deep link exists
+     *  (public-domain YouTube classics, Netflix title pages), falling back
+     *  to the provider app. Also learns the household's taste. */
+    private void launchTitle(Movie m) {
+        if (m == null) return;
+        Prefs.bumpAffinity(this, "g:" + Recommendations.genreKey(m.genre));
+        String pkg = m.providerPkg.length() > 0 ? m.providerPkg : PKG_PRIME;
+        Prefs.bumpAffinity(this, "p:" + pkg);
+        Prefs.putLastTitle(this, m.linkKind, m.videoId, m.title, pkg);
+        Uri uri = deepLinkUri(m.linkKind, m.videoId);
+        if (uri != null) {
+            Intent i = new Intent(Intent.ACTION_VIEW);
+            i.setData(uri);
+            String linkPkg = deepLinkPkg(m.linkKind);
+            if (linkPkg.length() > 0 && isInstalled(linkPkg)) i.setPackage(linkPkg);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            HomeKeyWatcherService.noteAppLaunch();
+            try {
+                startActivity(i);
+                return;
+            } catch (Throwable ignored) {
+                // fall through to the provider app below
+            }
+        }
+        launchPackage(pkg, m.providerName.length() > 0 ? m.providerName : "Prime Video");
+    }
+
+    /** Re-opens whatever was last played: title deep link first, then app. */
+    private void resumeLast() {
+        String kind = Prefs.lastTitleKind(this);
+        String id = Prefs.lastTitleId(this);
+        Uri uri = deepLinkUri(kind, id);
+        if (uri != null) {
+            String linkPkg = deepLinkPkg(kind);
+            if (linkPkg.length() == 0 || isInstalled(linkPkg)) {
+                Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setData(uri);
+                if (linkPkg.length() > 0) i.setPackage(linkPkg);
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                HomeKeyWatcherService.noteAppLaunch();
+                try {
+                    startActivity(i);
+                    return;
+                } catch (Throwable ignored) {
+                    // fall back below
+                }
+            }
+            String pkg = Prefs.lastTitlePkg(this);
+            if (pkg.length() > 0) {
+                String title = Prefs.lastTitle(this);
+                launchPackage(pkg, title.length() > 0 ? title : Prefs.lastLabel(this));
+                return;
+            }
+        }
+        String pkg = Prefs.lastPackage(this);
+        if (pkg.length() > 0) {
+            launchPackage(pkg, Prefs.lastLabel(this));
+        } else {
+            toast("Nothing to resume yet");
+        }
+    }
+
+    /** https://www.youtube.com/watch?v=<id> / nflx://www.netflix.com/title/<id>;
+     *  null when absent. Package-private static so SelfTest can assert the
+     *  exact URIs. */
+    static Uri deepLinkUri(String kind, String videoId) {
+        if (kind == null || videoId == null
+                || kind.length() == 0 || videoId.length() == 0) {
+            return null;
+        }
+        if ("yt".equals(kind)) {
+            // Fire TV's cobalt YouTube app does not register the vnd.youtube:
+            // scheme, but does handle watch URLs; pinned to its package so
+            // the full-film page opens directly.
+            return Uri.parse("https://www.youtube.com/watch?v=" + videoId);
+        }
+        if ("nf".equals(kind)) return Uri.parse("nflx://www.netflix.com/title/" + videoId);
+        return null;
+    }
+
+    /** The package that owns each deep-link kind ("" lets any handler open). */
+    static String deepLinkPkg(String kind) {
+        if ("yt".equals(kind)) return "com.amazon.firetv.youtube";
+        if ("nf".equals(kind)) return "com.netflix.ninja";
+        return "";
     }
 
     /** UI accent that leans toward the current scene's palette (feature 1). */
@@ -1008,9 +1099,23 @@ public class HomeActivity extends Activity {
         }
     }
 
-    /** Feature 3: bind the resume pill to the last app launched from home. */
+    /** Feature 3: resume pill — last deep-linked title, else last app. */
     private void bindResumePill() {
         if (mHeroResume == null) return;
+        String kind = Prefs.lastTitleKind(this);
+        String id = Prefs.lastTitleId(this);
+        Uri titleUri = deepLinkUri(kind, id);
+        if (titleUri != null && Prefs.lastTitle(this).length() > 0) {
+            String linkPkg = deepLinkPkg(kind);
+            if (linkPkg.length() == 0 || isInstalled(linkPkg)) {
+                mHeroResume.setVisibility(View.VISIBLE);
+                mHeroResumeLabel.setText("RESUME · "
+                        + Prefs.lastTitle(this).toUpperCase(Locale.US));
+                mHeroResumeLabel.setTextColor(0xFFF2F4F8);
+                if (mResumeIcon != null) mResumeIcon.setColor(contentAccent(), 0);
+                return;
+            }
+        }
         String pkg = Prefs.lastPackage(this);
         String label = Prefs.lastLabel(this);
         if (pkg.length() == 0 || !isInstalled(pkg)) {

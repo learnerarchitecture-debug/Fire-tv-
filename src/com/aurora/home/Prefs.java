@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -51,6 +52,14 @@ public final class Prefs {
     public static final String K_LAST_LABEL = "last_launch_label";
     /** UI accents follow the featured artwork's sampled palette. */
     public static final String K_PALETTE = "palette_theme";
+    /** Learned taste: "g:action:3|p:com.pkg:2" — bumped on every open so
+     *  recommendations follow what the household actually plays. */
+    public static final String K_AFFINITY = "affinity";
+    /** Continue Watching at title level: the last title deep-linked from home. */
+    public static final String K_LAST_TITLE_KIND = "last_title_kind";
+    public static final String K_LAST_TITLE_ID = "last_title_id";
+    public static final String K_LAST_TITLE = "last_title";
+    public static final String K_LAST_TITLE_PKG = "last_title_pkg";
 
     private Prefs() {}
 
@@ -265,5 +274,103 @@ public final class Prefs {
             }
         }
         return out;
+    }
+
+    // Learned affinity -----------------------------------------------------------
+
+    /** Parses "g:key:n|p:key:n" into an ordered map (bad entries skipped). */
+    static java.util.LinkedHashMap<String, Integer> parseAffinity(String raw) {
+        java.util.LinkedHashMap<String, Integer> out =
+                new java.util.LinkedHashMap<String, Integer>();
+        if (raw == null || raw.length() == 0) return out;
+        for (String part : raw.split("\\|")) {
+            String[] seg = part.split(":");
+            if (seg.length != 3 || seg[0].length() == 0 || seg[1].length() == 0) continue;
+            try {
+                int n = Integer.parseInt(seg[2]);
+                if (n > 0) out.put(seg[0] + ":" + seg[1], Integer.valueOf(n));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return out;
+    }
+
+    /** Serializes the affinity map back to the stored format ("" if empty). */
+    static String serializeAffinity(Map<String, Integer> map) {
+        if (map == null || map.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, Integer> e : map.entrySet()) {
+            if (e.getValue() == null || e.getValue() <= 0) continue;
+            if (sb.length() > 0) sb.append('|');
+            sb.append(e.getKey()).append(':').append(e.getValue());
+        }
+        return sb.toString();
+    }
+
+    /** Copy of map with key bumped by one, clamped at cap (package-private
+     *  so SelfTest can exercise the maths without touching real prefs). */
+    static Map<String, Integer> bumpAffinityMap(Map<String, Integer> map,
+                                                String key, int cap) {
+        java.util.LinkedHashMap<String, Integer> out =
+                new java.util.LinkedHashMap<String, Integer>();
+        if (map != null) out.putAll(map);
+        if (key == null || key.length() == 0) return out;
+        Integer cur = out.get(key);
+        int next = (cur == null ? 0 : cur.intValue()) + 1;
+        if (next > cap) next = cap;
+        out.put(key, Integer.valueOf(next));
+        return out;
+    }
+
+    /** The household's learned taste: counts per "g:<genre>" / "p:<pkg>". */
+    public static Map<String, Integer> affinity(Context c) {
+        return parseAffinity(get(c, K_AFFINITY, ""));
+    }
+
+    /** Records one more open of a genre ("g:action") or provider ("p:<pkg>"). */
+    public static void bumpAffinity(Context c, String key) {
+        if (key == null || key.length() == 0) return;
+        Map<String, Integer> m = bumpAffinityMap(affinity(c), key, 99);
+        put(c, K_AFFINITY, serializeAffinity(m));
+    }
+
+    public static int affinityOf(Context c, String key) {
+        Integer v = affinity(c).get(key);
+        return v == null ? 0 : v.intValue();
+    }
+
+    // Title-level Continue Watching ------------------------------------------------
+
+    public static String lastTitleKind(Context c) {
+        return get(c, K_LAST_TITLE_KIND, "");
+    }
+
+    public static String lastTitleId(Context c) {
+        return get(c, K_LAST_TITLE_ID, "");
+    }
+
+    public static String lastTitle(Context c) {
+        return get(c, K_LAST_TITLE, "");
+    }
+
+    public static String lastTitlePkg(Context c) {
+        return get(c, K_LAST_TITLE_PKG, "");
+    }
+
+    /** Remembers the last title deep-linked from home (""). */
+    public static void putLastTitle(Context c, String kind, String id,
+                                    String title, String pkg) {
+        put(c, K_LAST_TITLE_KIND, kind == null ? "" : kind);
+        put(c, K_LAST_TITLE_ID, id == null ? "" : id);
+        put(c, K_LAST_TITLE, title == null ? "" : title);
+        put(c, K_LAST_TITLE_PKG, pkg == null ? "" : pkg);
+    }
+
+    /** A direct app launch supersedes any remembered title. */
+    public static void clearLastTitle(Context c) {
+        put(c, K_LAST_TITLE_KIND, "");
+        put(c, K_LAST_TITLE_ID, "");
+        put(c, K_LAST_TITLE, "");
+        put(c, K_LAST_TITLE_PKG, "");
     }
 }

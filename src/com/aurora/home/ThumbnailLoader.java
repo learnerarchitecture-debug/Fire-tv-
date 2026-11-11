@@ -371,8 +371,9 @@ public final class ThumbnailLoader {
         }
     }
 
-    /** Loose token containment scoring; >= 4 means the name really matches. */
-    private static int matchScore(String found, String want) {
+    /** Loose token containment scoring; >= 4 means the name really matches.
+     *  Package-private so SelfTest can exercise it on-device. */
+    static int matchScore(String found, String want) {
         if (found == null || want == null || want.length() == 0) return 0;
         if (found.equals(want)) return 10;
         if (found.startsWith(want)) return 8;
@@ -385,7 +386,7 @@ public final class ThumbnailLoader {
         return hits;
     }
 
-    private static String clean(String s) {
+    static String clean(String s) {
         if (s == null) return "";
         return s.toLowerCase().replaceAll("[^a-z0-9 ]", "").trim().replaceAll(" +", " ");
     }
